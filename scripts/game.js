@@ -47,6 +47,8 @@ class GameObject {
         this.position = { x: 0, y: 0 };
         this.rotation = 0;
         this.element = document.createElement("div");
+        this.offset = 0;
+        if (html?.offset) this.offset = html.offset;
         if (html?.id) this.element.id = html.id;
         if (html?.classList) this.element.classList.add(...html.classList);
         document.getElementById("canvas").append(this.element);
@@ -77,8 +79,8 @@ class Cursor extends GameObject {
         this.position = { x: 0, y: 0 };
 
         document.addEventListener("mousemove", (event) => {
-            this.position.x = event.clientX;
-            this.position.y = event.clientY;
+            this.position.x = event.x;
+            this.position.y = event.y;
         });
 
         game.onAnimation(() => {
@@ -103,31 +105,35 @@ class MagePointer extends Entity {
     }
 }
 
-class Fireball extends Entity {
-    constructor(mage, html) {
+class Spell extends Entity {
+    /**
+     * @param { Mage } mage
+     * @param {*} data
+     * @param {{ id: string, classList: string[] }} html
+     * @description create a new mage entity
+     */
+    constructor(mage, data, html) {
         super(html);
+        this.data = data;
         this.mage = mage;
-        this.position = mage.position;
+        this.position = { ...mage.position };
+        this.rotation = mage.pointer.rotation;
 
-        game.onUpdate(() => {
-            let y = cursor.position.y / game.pixelSize - 7 - this.position.y;
-            let x = cursor.position.x / game.pixelSize - 7 - this.position.x;
-            this.rotation = Math.atan2(y, x) * (180 / Math.PI);
-        });
+        game.onAnimation(() => this.updatePosition());
     }
 }
 
 class Mage extends Entity {
     /**
      * @param { string } id
-     * @param {{ up: string, down: string, left: string, right: string }} keybinds
+     * @param {{ up: string, down: string, left: string, right: string, shoot: string }} keybinds
      * @param {{ id: string, classList: string[] }} html
      * @description create a new mage entity
      */
     constructor(keybinds, html) {
         super(html);
         this.hp = 5;
-        this.speed = 0.2;
+        this.speed = 0.15;
         this.acceleration = 0;
         this.keybinds = keybinds;
         this.hasCooldown = false;
@@ -154,6 +160,23 @@ class Mage extends Entity {
         return true;
     }
 
+    shoot() {
+        const spell = new Spell(
+            this,
+            {
+                type: "projectile",
+                damage: 10,
+                speed: 1,
+            },
+            {
+                offset: 100,
+                classList: ["fireball"],
+            }
+        );
+
+        spell.updatePosition();
+    }
+
     /**
      * @description set positioning, rotation, movement, and interaction events for mage
      */
@@ -167,6 +190,14 @@ class Mage extends Entity {
                 ? "right"
                 : "left"
         );
+
+        switch (true) {
+            case this.keypresses.has(this.keybinds.shoot):
+                if (this.hasCooldown) break;
+                this.hasCooldown = true;
+                this.shoot();
+                sleep(500).then(() => (this.hasCooldown = false));
+        }
 
         switch (true) {
             case this.hasKeypress(this.keybinds.up, this.keybinds.right):

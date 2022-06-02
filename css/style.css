@@ -9,11 +9,44 @@ body {
   height: 100vh;
   width: 100%;
   cursor: none;
-  background-color: white;
+}
+
+#canvas {
+  position: absolute;
 }
 
 #canvas * {
   position: absolute;
+}
+
+.fireball {
+  background-image: url(../images/fireball.png);
+  height: 64px;
+  width: 64px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  -ms-interpolation-mode: nearest-neighbor;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -o-pixelated;
+      image-rendering: pixelated;
+}
+
+.mage-pointer {
+  margin-left: 32px;
+  -webkit-transform-origin: left;
+          transform-origin: left;
+  height: 64px;
+  width: 96px;
+  background-image: url(../images/staff.png);
+  background-position: right;
+  background-repeat: no-repeat;
+  background-size: contain;
+  -ms-interpolation-mode: nearest-neighbor;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -o-pixelated;
+      image-rendering: pixelated;
 }
 
 .mage-default {
@@ -29,34 +62,17 @@ body {
 }
 
 .mage-default[view-direction="right"] {
-  background-image: url(./images/mage-right.png);
+  background-image: url(../images/mage-right.png);
 }
 
 .mage-default[view-direction="left"] {
-  background-image: url(./images/mage-left.png);
-}
-
-.mage-pointer {
-  margin-left: 32px;
-  -webkit-transform-origin: left;
-          transform-origin: left;
-  height: 64px;
-  width: 96px;
-  background-image: url(./images/staff.png);
-  background-position: right;
-  background-repeat: no-repeat;
-  background-size: contain;
-  -ms-interpolation-mode: nearest-neighbor;
-      image-rendering: -webkit-optimize-contrast;
-      image-rendering: -moz-crisp-edges;
-      image-rendering: -o-pixelated;
-      image-rendering: pixelated;
+  background-image: url(../images/mage-left.png);
 }
 
 #cursor {
   height: 64px;
   width: 64px;
-  background-image: url(./images/cursor-default.png);
+  background-image: url(../images/cursor-default.png);
   background-repeat: no-repeat;
   background-size: contain;
   -ms-interpolation-mode: nearest-neighbor;

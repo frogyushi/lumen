@@ -6,6 +6,7 @@ const mage = new Mage(
         down: "s",
         left: "a",
         right: "d",
+        shoot: " ",
     },
     {
         id: "mage",
