@@ -197,6 +197,7 @@ class Mage extends Entity {
                 this.hasCooldown = true;
                 this.shoot();
                 sleep(500).then(() => (this.hasCooldown = false));
+                break;
         }
 
         switch (true) {
@@ -228,14 +229,16 @@ class Mage extends Entity {
             case this.hasKeypress(this.keybinds.right):
                 this.velocity.x += this.acceleration;
                 break;
-            default: // no movement active
+            default:
                 this.active = false;
                 break;
         }
 
         this.acceleration += 0.01;
 
-        if (this.acceleration > this.speed) this.acceleration = this.speed;
+        if (this.acceleration > this.speed) {
+            this.acceleration = this.speed;
+        }
     }
 
     move() {
