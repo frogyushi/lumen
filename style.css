@@ -20,7 +20,7 @@ body {
 }
 
 .fireball {
-  background-image: url(../images/fireball.png);
+  background-image: url(./images/fireball.png);
   height: 64px;
   width: 64px;
   background-repeat: no-repeat;
@@ -32,13 +32,13 @@ body {
       image-rendering: pixelated;
 }
 
-.mage-pointer {
+.character-pointer {
   margin-left: 32px;
   -webkit-transform-origin: left;
           transform-origin: left;
   height: 64px;
   width: 96px;
-  background-image: url(../images/staff.png);
+  background-image: url(./images/staff.png);
   background-position: right;
   background-repeat: no-repeat;
   background-size: contain;
@@ -49,7 +49,7 @@ body {
       image-rendering: pixelated;
 }
 
-.mage-default {
+.character-default {
   height: 64px;
   width: 64px;
   -ms-interpolation-mode: nearest-neighbor;
@@ -61,18 +61,18 @@ body {
   background-size: contain;
 }
 
-.mage-default[view-direction="right"] {
-  background-image: url(../images/mage-right.png);
+.character-default[view="right"] {
+  background-image: url(./images/mage-right.png);
 }
 
-.mage-default[view-direction="left"] {
-  background-image: url(../images/mage-left.png);
+.character-default[view="left"] {
+  background-image: url(./images/mage-left.png);
 }
 
 #cursor {
   height: 64px;
   width: 64px;
-  background-image: url(../images/cursor-default.png);
+  background-image: url(./images/cursor-default.png);
   background-repeat: no-repeat;
   background-size: contain;
   -ms-interpolation-mode: nearest-neighbor;
