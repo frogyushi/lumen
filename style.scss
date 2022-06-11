@@ -13,11 +13,20 @@ body {
 }
 
 #canvas {
+    width: 100%;
+    height: 100vh;
     position: absolute;
 
     * {
         position: absolute;
     }
+}
+
+.map {
+    width: 16px * $pixel-size * 23;
+    height: 16px * $pixel-size * 10;
+    background-color: rgb(255, 255, 255);
+    margin: 0;
 }
 
 .fireball {

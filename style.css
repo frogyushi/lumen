@@ -12,11 +12,20 @@ body {
 }
 
 #canvas {
+  width: 100%;
+  height: 100vh;
   position: absolute;
 }
 
 #canvas * {
   position: absolute;
+}
+
+.map {
+  width: 1472px;
+  height: 640px;
+  background-color: white;
+  margin: 0;
 }
 
 .fireball {

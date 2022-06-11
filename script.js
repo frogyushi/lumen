@@ -1,12 +1,14 @@
 class Game {
     static PIXEL_SIZE = 4;
-
-    static wait(ms) {
-        return new Promise((resolve) => setTimeout(resolve, ms));
-    }
+    static CANVAS = "map";
 
     constructor() {
         this.objects = new Set();
+        this.map = document.getElementById("map");
+    }
+
+    static wait(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
     }
 }
 
@@ -24,7 +26,7 @@ class GameObject {
             this.element.classList.add(...html.classList);
         }
 
-        document.getElementById("canvas").append(this.element);
+        document.getElementById(html?.parent || Game.CANVAS).append(this.element);
 
         game.objects.add(this);
     }
@@ -98,10 +100,31 @@ class CharacterPointer extends Entity {
     }
 
     onUpdate() {
-        let y = this.cursor.position.y / Game.PIXEL_SIZE - 7 - this.position.y;
-        let x = this.cursor.position.x / Game.PIXEL_SIZE - 7 - this.position.x;
+        const margin = getComputedStyle(game.map).margin.slice(0, 2) / Game.PIXEL_SIZE || 0;
+        const y = this.cursor.position.y / Game.PIXEL_SIZE - 7 - this.position.y - margin;
+        const x = this.cursor.position.x / Game.PIXEL_SIZE - 7 - this.position.x - margin;
 
         this.rotation = Math.atan2(y, x) * (180 / Math.PI);
+    }
+
+    onAnimation() {
+        this.animate();
+    }
+}
+
+class Projectile extends Entity {
+    constructor({ game, character, html, cursor }) {
+        super({ game, html });
+        this.mage = mage;
+
+        this.cursor = {
+            position: { ...cursor.position },
+        };
+
+        this.position = { ...character.position };
+        this.rotation = character.pointer.rotation;
+
+        this.load();
     }
 
     onAnimation() {
@@ -116,6 +139,7 @@ class Character extends Entity {
         this.keypresses = new Set();
         this.hasCooldown = false;
         this.isMoving = false;
+        this.cursor = cursor;
 
         if (options?.position) {
             this.position = options.position;
@@ -127,6 +151,7 @@ class Character extends Entity {
             character: this,
             html: {
                 classList: ["character-pointer"],
+                parent: "map",
             },
         });
 
@@ -147,10 +172,30 @@ class Character extends Entity {
         return true;
     }
 
+    attack() {
+        new Projectile({
+            game,
+            cursor: this.cursor,
+            character: this,
+            html: {
+                classList: ["fireball"],
+            },
+        });
+    }
+
     onUpdate() {
         this.isMoving = true;
         this.elapsedTime += 0.01;
         this.view = this.pointer.rotation < 90 && this.pointer.rotation > -90 ? "right" : "left";
+
+        switch (true) {
+            case this.input(this.keybinds.attack):
+                if (this.hasCooldown) break;
+                this.hasCooldown = true;
+                this.attack();
+                Game.wait(1000).then(() => (this.hasCooldown = false));
+                break;
+        }
 
         switch (true) {
             case this.input(this.keybinds.up, this.keybinds.right):
@@ -211,6 +256,7 @@ const game = new Game();
 const cursor = new Cursor({
     game,
     html: {
+        parent: "canvas",
         id: "cursor",
     },
 });
@@ -226,10 +272,7 @@ const mage = new Character({
             down: "s",
             left: "a",
             right: "d",
-        },
-        position: {
-            x: 16 * 14,
-            y: 16 * 7,
+            attack: " ",
         },
     },
     html: {
