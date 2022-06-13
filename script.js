@@ -21,6 +21,7 @@ class GameObject {
         this.position = { x: 0, y: 0 };
         this.rotation = 0;
         this.element = document.createElement("div");
+        this.html = html;
 
         if (html?.id) {
             this.element.id = html.id;
@@ -30,9 +31,11 @@ class GameObject {
             this.element.classList.add(...html.classList);
         }
 
-        document.getElementById(html?.parent || Game.CANVAS).append(this.element);
-
         game.objects.add(this);
+    }
+
+    render() {
+        document.getElementById(this.html?.parent || Game.CANVAS).append(this.element);
     }
 
     load() {
@@ -67,6 +70,7 @@ class Cursor extends GameObject {
         });
 
         this.load();
+        this.render();
     }
 
     onAnimation() {
@@ -86,7 +90,7 @@ class Entity extends GameObject {
         this.velocity = { x: 0, y: 0 };
     }
 
-    render(...c) {
+    renderVelocity(...c) {
         for (let x of c) {
             if (Math.round(this.velocity[x] * 100) != 0) this.velocity[x] *= 0.93;
             else this.velocity[x] = 0;
@@ -102,6 +106,7 @@ class CharacterPointer extends Entity {
         this.position = character.position;
 
         this.load();
+        this.render();
     }
 
     onUpdate() {
@@ -122,14 +127,11 @@ class Projectile extends Entity {
         super({ game, html, options });
         this.character = character;
         this.cursor = { position: { ...cursor.position } };
+        this.manaUsage = options?.manaUsage || 0;
 
         let accuracy = character?.accuracy || 0;
         let spread = Game.getRandom(-accuracy, accuracy);
-        console.log(spread);
         this.rotation = character.pointer.rotation - spread;
-
-        let rad = (this.rotation * Math.PI) / 180;
-        let r = 25;
 
         const margin = getComputedStyle(game.map).margin.slice(0, 2) / Game.PIXEL_SIZE || 0;
         let x = this.cursor.position.x / Game.PIXEL_SIZE - 7 - this.character.position.x - margin;
@@ -139,12 +141,12 @@ class Projectile extends Entity {
             y: y / Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
         };
 
+        let rad = (this.rotation * Math.PI) / 180;
+        let r = 25;
         this.position = {
             x: r * Math.cos(rad) + character.position.x,
             y: r * Math.sin(rad) + character.position.y,
         };
-
-        this.load();
     }
 
     onUpdate() {
@@ -163,8 +165,17 @@ class Character extends Entity {
         this.keybinds = options?.keybinds || {};
         this.keypresses = new Set();
         this.hasCooldown = false;
+        this.maxMana = 100;
+        this.mana = options?.mana || 0;
         this.isMoving = false;
         this.cursor = cursor;
+
+        setInterval(() => {
+            if (this.mana < this.maxMana) {
+                this.mana += 0.5;
+                console.log(this.mana);
+            }
+        }, 100);
 
         if (options?.position) {
             this.position = options.position;
@@ -189,6 +200,7 @@ class Character extends Entity {
         });
 
         this.load();
+        this.render();
     }
 
     set view(direction) {
@@ -206,17 +218,24 @@ class Character extends Entity {
     }
 
     attack() {
-        new Projectile({
+        const projectile = new Projectile({
             game,
             cursor: this.cursor,
             character: this,
             options: {
                 speed: 1.5,
+                manaUsage: 10,
             },
             html: {
                 classList: ["fireball"],
             },
         });
+
+        if (this.mana - projectile.manaUsage > 0) {
+            this.mana -= projectile.manaUsage;
+            projectile.load();
+            projectile.render();
+        }
     }
 
     onUpdate() {
@@ -267,7 +286,7 @@ class Character extends Entity {
                 break;
         }
 
-        this.render("x", "y");
+        this.renderVelocity("x", "y");
         this.move();
 
         if (this.elapsedTime > this.speed) {
@@ -300,6 +319,8 @@ const mage = new Character({
     cursor,
     options: {
         hp: 100,
+        maxMana: 100,
+        mana: 100,
         speed: 0.15,
         accuracy: 0,
         firerate: 300,
