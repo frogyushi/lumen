@@ -162,9 +162,11 @@ class Projectile extends Entity {
 class Character extends Entity {
     constructor({ game, cursor, html, options }) {
         super({ game, html, options });
+        this.id = html?.id || null;
         this.keybinds = options?.keybinds || {};
         this.keypresses = new Set();
         this.hasCooldown = false;
+        this.maxHp = options?.maxHp || 0;
         this.maxMana = 100;
         this.mana = options?.mana || 0;
         this.isMoving = false;
@@ -172,8 +174,7 @@ class Character extends Entity {
 
         setInterval(() => {
             if (this.mana < this.maxMana) {
-                this.mana += 0.5;
-                console.log(this.mana);
+                this.mana += 1;
             }
         }, 100);
 
@@ -318,7 +319,8 @@ const mage = new Character({
     game,
     cursor,
     options: {
-        hp: 100,
+        maxHp: 50,
+        hp: 50,
         maxMana: 100,
         mana: 100,
         speed: 0.15,

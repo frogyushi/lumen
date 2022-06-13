@@ -6,6 +6,7 @@
 }
 
 body {
+  position: absolute;
   height: 100vh;
   width: 100%;
   cursor: none;
@@ -15,6 +16,7 @@ body {
   width: 100%;
   height: 100vh;
   position: absolute;
+  background-color: #fff;
 }
 
 #canvas * {
@@ -29,6 +31,7 @@ body {
 }
 
 .fireball {
+  position: absolute;
   background-image: url(./images/fireball.png);
   height: 64px;
   width: 64px;
@@ -56,6 +59,7 @@ body {
       image-rendering: -moz-crisp-edges;
       image-rendering: -o-pixelated;
       image-rendering: pixelated;
+  z-index: 100;
 }
 
 .character-default {

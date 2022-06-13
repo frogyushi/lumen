@@ -17,6 +17,7 @@ body {
     width: 100%;
     height: 100vh;
     position: absolute;
+    background-color: #fff;
 
     * {
         position: absolute;
@@ -51,6 +52,7 @@ body {
         background-repeat: no-repeat;
         background-size: contain;
         image-rendering: pixelated;
+        z-index: 100;
     }
 
     &-default {
