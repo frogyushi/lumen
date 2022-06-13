@@ -7,6 +7,7 @@ $pixel-size: 4;
 }
 
 body {
+    position: absolute;
     height: 100vh;
     width: 100%;
     cursor: none;
@@ -30,6 +31,7 @@ body {
 }
 
 .fireball {
+    position: absolute;
     background-image: url(./images/fireball.png);
     height: 16px * $pixel-size;
     width: 16px * $pixel-size;

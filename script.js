@@ -7,6 +7,10 @@ class Game {
         this.map = document.getElementById("map");
     }
 
+    static getRandom(min, max) {
+        return Math.floor(Math.random() * (max - min + 1) + min);
+    }
+
     static wait(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
     }
@@ -58,9 +62,8 @@ class Cursor extends GameObject {
     constructor({ game, html }) {
         super({ game, html });
 
-        document.addEventListener("mousemove", (event) => {
-            this.position.x = event.x;
-            this.position.y = event.y;
+        document.addEventListener("mousemove", ({ x, y }) => {
+            this.position = { x, y };
         });
 
         this.load();
@@ -77,15 +80,17 @@ class Cursor extends GameObject {
 class Entity extends GameObject {
     constructor({ game, html, options }) {
         super({ game, html });
-        this.hp = options?.hp ? options.hp : 0;
-        this.speed = options?.speed ? options.speed : 0;
+        this.hp = options?.hp || 0;
+        this.speed = options?.speed || 0;
         this.elapsedTime = 0;
         this.velocity = { x: 0, y: 0 };
     }
 
-    render(c) {
-        if (Math.round(this.velocity[c] * 100) != 0) this.velocity[c] *= 0.93;
-        else this.velocity[c] = 0;
+    render(...c) {
+        for (let x of c) {
+            if (Math.round(this.velocity[x] * 100) != 0) this.velocity[x] *= 0.93;
+            else this.velocity[x] = 0;
+        }
     }
 }
 
@@ -113,18 +118,38 @@ class CharacterPointer extends Entity {
 }
 
 class Projectile extends Entity {
-    constructor({ game, character, html, cursor }) {
-        super({ game, html });
-        this.mage = mage;
+    constructor({ game, character, options, html, cursor }) {
+        super({ game, html, options });
+        this.character = character;
+        this.cursor = { position: { ...cursor.position } };
 
-        this.cursor = {
-            position: { ...cursor.position },
+        let accuracy = character?.accuracy || 0;
+        let spread = Game.getRandom(-accuracy, accuracy);
+        console.log(spread);
+        this.rotation = character.pointer.rotation - spread;
+
+        let rad = (this.rotation * Math.PI) / 180;
+        let r = 25;
+
+        const margin = getComputedStyle(game.map).margin.slice(0, 2) / Game.PIXEL_SIZE || 0;
+        let x = this.cursor.position.x / Game.PIXEL_SIZE - 7 - this.character.position.x - margin;
+        let y = this.cursor.position.y / Game.PIXEL_SIZE - 7 - this.character.position.y - margin;
+        this.directional = {
+            x: x / Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
+            y: y / Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
         };
 
-        this.position = { ...character.position };
-        this.rotation = character.pointer.rotation;
+        this.position = {
+            x: r * Math.cos(rad) + character.position.x,
+            y: r * Math.sin(rad) + character.position.y,
+        };
 
         this.load();
+    }
+
+    onUpdate() {
+        this.position.x += this.directional.x * this.speed;
+        this.position.y += this.directional.y * this.speed;
     }
 
     onAnimation() {
@@ -143,6 +168,14 @@ class Character extends Entity {
 
         if (options?.position) {
             this.position = options.position;
+        }
+
+        if (options?.firerate) {
+            this.firerate = options.firerate;
+        }
+
+        if (options?.accuracy) {
+            this.accuracy = options.accuracy;
         }
 
         this.pointer = new CharacterPointer({
@@ -177,6 +210,9 @@ class Character extends Entity {
             game,
             cursor: this.cursor,
             character: this,
+            options: {
+                speed: 1.5,
+            },
             html: {
                 classList: ["fireball"],
             },
@@ -193,7 +229,7 @@ class Character extends Entity {
                 if (this.hasCooldown) break;
                 this.hasCooldown = true;
                 this.attack();
-                Game.wait(1000).then(() => (this.hasCooldown = false));
+                Game.wait(this.firerate).then(() => (this.hasCooldown = false));
                 break;
         }
 
@@ -231,9 +267,7 @@ class Character extends Entity {
                 break;
         }
 
-        this.render("x");
-        this.render("y");
-
+        this.render("x", "y");
         this.move();
 
         if (this.elapsedTime > this.speed) {
@@ -267,6 +301,8 @@ const mage = new Character({
     options: {
         hp: 100,
         speed: 0.15,
+        accuracy: 0,
+        firerate: 300,
         keybinds: {
             up: "w",
             down: "s",
@@ -279,6 +315,12 @@ const mage = new Character({
         id: "character",
         classList: ["character-default"],
     },
+});
+
+window.addEventListener("keydown", function (e) {
+    if (e.key == " " && e.target == document.body) {
+        e.preventDefault();
+    }
 });
 
 window.addEventListener("keydown", (e) => mage.keypresses.add(e.key));
