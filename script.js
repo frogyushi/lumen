@@ -166,11 +166,14 @@ class Character extends Entity {
         this.keybinds = options?.keybinds || {};
         this.keypresses = new Set();
         this.hasCooldown = false;
+        this.isMoving = false;
+        this.cursor = cursor;
+
         this.maxHp = options?.maxHp || 0;
         this.maxMana = 100;
         this.mana = options?.mana || 0;
-        this.isMoving = false;
-        this.cursor = cursor;
+        this.fireRate = options?.fireRate || 500;
+        this.accuracy = options?.accuracy || 0;
 
         setInterval(() => {
             if (this.mana < this.maxMana) {
@@ -180,14 +183,6 @@ class Character extends Entity {
 
         if (options?.position) {
             this.position = options.position;
-        }
-
-        if (options?.firerate) {
-            this.firerate = options.firerate;
-        }
-
-        if (options?.accuracy) {
-            this.accuracy = options.accuracy;
         }
 
         this.pointer = new CharacterPointer({
@@ -249,7 +244,7 @@ class Character extends Entity {
                 if (this.hasCooldown) break;
                 this.hasCooldown = true;
                 this.attack();
-                Game.wait(this.firerate).then(() => (this.hasCooldown = false));
+                Game.wait(this.fireRate).then(() => (this.hasCooldown = false));
                 break;
         }
 
@@ -325,7 +320,7 @@ const mage = new Character({
         mana: 100,
         speed: 0.15,
         accuracy: 0,
-        firerate: 300,
+        fireRate: 300,
         keybinds: {
             up: "w",
             down: "s",
