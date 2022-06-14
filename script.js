@@ -154,12 +154,12 @@ class Character extends Entity {
     constructor({ game, cursor, html, options }) {
         super({ game, html, options });
         this.id = html?.id || null;
-        this.keybinds = options?.keybinds || {};
-        this.position = options?.position || { x: 0, y: 0 };
         this.keypresses = new Set();
         this.hasCooldown = false;
         this.isMoving = false;
         this.cursor = cursor;
+        this.keybinds = options?.keybinds || {};
+        this.position = options?.position || { x: 0, y: 0 };
         this.maxHp = options?.maxHp || 0;
         this.maxMana = options?.maxMana || 0;
         this.mana = options?.mana || 0;
@@ -310,7 +310,7 @@ const cursor = new Cursor({
     },
 });
 
-new Character({
+const character = new Character({
     game,
     cursor,
     options: {
@@ -333,3 +333,130 @@ new Character({
         classList: ["character-default"],
     },
 });
+
+class Item {
+    constructor({ name, description, stats, sprite }) {
+        this.sprite = sprite;
+        this.name = name;
+        this.description = description;
+        this.stats = stats;
+    }
+}
+
+const items = [
+    new Item({
+        name: "shaped glass",
+        sprite: "images/shaped-glass.png",
+        description: "multiply damage by 1.5 times, halfs hp",
+        stats: [
+            ["hp", -(character.hp / 2)],
+            ["damage", character.damage * 2],
+        ],
+    }),
+    new Item({
+        name: "shaped glass",
+        sprite: "images/shaped-glass.png",
+        description: "multiply damage by 1.5 times, halfs hp",
+        stats: [
+            ["hp", -(character.hp / 2)],
+            ["damage", character.damage * 2],
+        ],
+    }),
+    new Item({
+        name: "shaped glass",
+        sprite: "images/shaped-glass.png",
+        description: "multiply damage by 1.5 times, halfs hp",
+        stats: [
+            ["hp", -(character.hp / 2)],
+            ["damage", character.damage * 2],
+        ],
+    }),
+    new Item({
+        name: "shaped glass",
+        sprite: "images/shaped-glass.png",
+        description: "multiply damage by 1.5 times, halfs hp",
+        stats: [
+            ["hp", -(character.hp / 2)],
+            ["damage", character.damage * 2],
+        ],
+    }),
+    new Item({
+        name: "shaped glass",
+        sprite: "images/shaped-glass.png",
+        description: "multiply damage by 1.5 times, halfs hp",
+        stats: [
+            ["hp", -(character.hp / 2)],
+            ["damage", character.damage * 2],
+        ],
+    }),
+    new Item({
+        name: "shaped glass",
+        sprite: "images/shaped-glass.png",
+        description: "multiply damage by 1.5 times, halfs hp",
+        stats: [
+            ["hp", -(character.hp / 2)],
+            ["damage", character.damage * 2],
+        ],
+    }),
+    new Item({
+        name: "shaped glass",
+        sprite: "images/shaped-glass.png",
+        description: "multiply damage by 1.5 times, halfs hp",
+        stats: [
+            ["hp", -(character.hp / 2)],
+            ["damage", character.damage * 2],
+        ],
+    }),
+    new Item({
+        name: "shaped glass",
+        sprite: "images/shaped-glass.png",
+        description: "multiply damage by 1.5 times, halfs hp",
+        stats: [
+            ["hp", -(character.hp / 2)],
+            ["damage", character.damage * 2],
+        ],
+    }),
+];
+
+function searchItem(name) {
+    let found = null;
+    for (const item of items) {
+        if (item.name === name) found = item;
+    }
+
+    return found;
+}
+
+function getItemsByTypeAndRarety(type, rarety) {
+    let found = [];
+    for (const item of items) {
+        if (item.type === type && item.rarety === rarety) found.push(item);
+    }
+
+    return found;
+}
+
+const shapedGlass = searchItem("shaped glass");
+
+class Chest {
+    constructor({ mapPosition }) {
+        this.type = type;
+        this.mapPosition = mapPosition;
+        this.items = [];
+    }
+}
+
+class BossRoom {
+    constructor() {
+        this.chests = [
+            new Chest({
+                mapPosition: {
+                    x: 4,
+                    y: 2,
+                },
+            }),
+        ];
+
+        // for loop; get random items out of items list
+    }
+}
