@@ -23,13 +23,8 @@ class GameObject {
         this.element = document.createElement("div");
         this.html = html;
 
-        if (html?.id) {
-            this.element.id = html.id;
-        }
-
-        if (html?.classList) {
-            this.element.classList.add(...html.classList);
-        }
+        if (html?.id) this.element.id = html.id;
+        if (html?.classList) this.element.classList.add(...html.classList);
 
         game.objects.add(this);
     }
@@ -64,10 +59,7 @@ class GameObject {
 class Cursor extends GameObject {
     constructor({ game, html }) {
         super({ game, html });
-
-        document.addEventListener("mousemove", ({ x, y }) => {
-            this.position = { x, y };
-        });
+        document.addEventListener("mousemove", ({ x, y }) => (this.position = { x, y }));
 
         this.load();
         this.render();
@@ -92,8 +84,12 @@ class Entity extends GameObject {
 
     renderVelocity(...c) {
         for (let x of c) {
-            if (Math.round(this.velocity[x] * 100) != 0) this.velocity[x] *= 0.93;
-            else this.velocity[x] = 0;
+            if (Math.round(this.velocity[x] * 100) != 0) {
+                this.velocity[x] *= 0.93;
+                continue;
+            }
+
+            this.velocity[x] = 0;
         }
     }
 }
@@ -126,16 +122,14 @@ class Projectile extends Entity {
     constructor({ game, character, options, html, cursor }) {
         super({ game, html, options });
         this.character = character;
-        this.cursor = { position: { ...cursor.position } };
         this.manaUsage = options?.manaUsage || 0;
-
-        let accuracy = character?.accuracy || 0;
-        let spread = Game.getRandom(-accuracy, accuracy);
-        this.rotation = character.pointer.rotation - spread;
+        this.rotation = character.pointer.rotation;
+        this.cursor = { position: cursor.position };
 
         const margin = getComputedStyle(game.map).margin.slice(0, 2) / Game.PIXEL_SIZE || 0;
         let x = this.cursor.position.x / Game.PIXEL_SIZE - 7 - this.character.position.x - margin;
         let y = this.cursor.position.y / Game.PIXEL_SIZE - 7 - this.character.position.y - margin;
+
         this.directional = {
             x: x / Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
             y: y / Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
@@ -143,6 +137,7 @@ class Projectile extends Entity {
 
         let rad = (this.rotation * Math.PI) / 180;
         let r = 25;
+
         this.position = {
             x: r * Math.cos(rad) + character.position.x,
             y: r * Math.sin(rad) + character.position.y,
@@ -164,26 +159,15 @@ class Character extends Entity {
         super({ game, html, options });
         this.id = html?.id || null;
         this.keybinds = options?.keybinds || {};
+        this.position = options?.position || { x: 0, y: 0 };
         this.keypresses = new Set();
         this.hasCooldown = false;
         this.isMoving = false;
         this.cursor = cursor;
-
         this.maxHp = options?.maxHp || 0;
-        this.maxMana = 100;
+        this.maxMana = options?.maxMana || 0;
         this.mana = options?.mana || 0;
         this.fireRate = options?.fireRate || 500;
-        this.accuracy = options?.accuracy || 0;
-
-        setInterval(() => {
-            if (this.mana < this.maxMana) {
-                this.mana += 1;
-            }
-        }, 100);
-
-        if (options?.position) {
-            this.position = options.position;
-        }
 
         this.pointer = new CharacterPointer({
             game,
@@ -194,6 +178,12 @@ class Character extends Entity {
                 parent: "map",
             },
         });
+
+        setInterval(() => {
+            if (this.mana < this.maxMana) {
+                this.mana += 1;
+            }
+        }, 100);
 
         this.load();
         this.render();
@@ -244,7 +234,11 @@ class Character extends Entity {
                 if (this.hasCooldown) break;
                 this.hasCooldown = true;
                 this.attack();
-                Game.wait(this.fireRate).then(() => (this.hasCooldown = false));
+
+                Game.wait(this.fireRate).then(() => {
+                    this.hasCooldown = false;
+                });
+
                 break;
         }
 
@@ -319,7 +313,6 @@ const mage = new Character({
         maxMana: 100,
         mana: 100,
         speed: 0.15,
-        accuracy: 0,
         fireRate: 300,
         keybinds: {
             up: "w",
@@ -335,11 +328,11 @@ const mage = new Character({
     },
 });
 
-window.addEventListener("keydown", function (e) {
-    if (e.key == " " && e.target == document.body) {
-        e.preventDefault();
-    }
+window.addEventListener("keydown", (event) => {
+    mage.keypresses.add(event.key);
+    event.preventDefault();
 });
 
-window.addEventListener("keydown", (e) => mage.keypresses.add(e.key));
-window.addEventListener("keyup", (e) => mage.keypresses.delete(e.key));
+window.addEventListener("keyup", (event) => {
+    mage.keypresses.delete(event.key);
+});
