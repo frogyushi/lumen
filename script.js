@@ -181,6 +181,15 @@ class Character extends Entity {
             }
         }, 100);
 
+        window.addEventListener("keydown", (event) => {
+            this.keypresses.add(event.key);
+            event.preventDefault();
+        });
+
+        window.addEventListener("keyup", (event) => {
+            this.keypresses.delete(event.key);
+        });
+
         this.load();
         this.render();
     }
@@ -229,6 +238,7 @@ class Character extends Entity {
             case this.input(this.keybinds.shoot):
                 if (this.hasCooldown) break;
                 this.hasCooldown = true;
+
                 this.shootProjectile();
 
                 Game.wait(this.fireRate).then(() => {
@@ -300,7 +310,7 @@ const cursor = new Cursor({
     },
 });
 
-const mage = new Character({
+new Character({
     game,
     cursor,
     options: {
@@ -322,13 +332,4 @@ const mage = new Character({
         id: "character",
         classList: ["character-default"],
     },
-});
-
-window.addEventListener("keydown", (event) => {
-    mage.keypresses.add(event.key);
-    event.preventDefault();
-});
-
-window.addEventListener("keyup", (event) => {
-    mage.keypresses.delete(event.key);
 });
