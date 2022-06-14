@@ -82,14 +82,14 @@ class Entity extends GameObject {
         this.velocity = { x: 0, y: 0 };
     }
 
-    renderVelocity(...c) {
-        for (let x of c) {
-            if (Math.round(this.velocity[x] * 100) != 0) {
-                this.velocity[x] *= 0.93;
+    renderVelocity(...args) {
+        for (let i of args) {
+            if (Math.round(this.velocity[i] * 100) != 0) {
+                this.velocity[i] *= 0.93;
                 continue;
             }
 
-            this.velocity[x] = 0;
+            this.velocity[i] = 0;
         }
     }
 }
@@ -106,9 +106,8 @@ class CharacterPointer extends Entity {
     }
 
     onUpdate() {
-        const margin = getComputedStyle(game.map).margin.slice(0, 2) / Game.PIXEL_SIZE || 0;
-        const y = this.cursor.position.y / Game.PIXEL_SIZE - 7 - this.position.y - margin;
-        const x = this.cursor.position.x / Game.PIXEL_SIZE - 7 - this.position.x - margin;
+        const y = this.cursor.position.y / Game.PIXEL_SIZE - 7 - this.position.y;
+        const x = this.cursor.position.x / Game.PIXEL_SIZE - 7 - this.position.x;
 
         this.rotation = Math.atan2(y, x) * (180 / Math.PI);
     }
@@ -126,21 +125,18 @@ class Projectile extends Entity {
         this.rotation = character.pointer.rotation;
         this.cursor = { position: cursor.position };
 
-        const margin = getComputedStyle(game.map).margin.slice(0, 2) / Game.PIXEL_SIZE || 0;
-        let x = this.cursor.position.x / Game.PIXEL_SIZE - 7 - this.character.position.x - margin;
-        let y = this.cursor.position.y / Game.PIXEL_SIZE - 7 - this.character.position.y - margin;
+        const x = this.cursor.position.x / Game.PIXEL_SIZE - 7 - this.character.position.x;
+        const y = this.cursor.position.y / Game.PIXEL_SIZE - 7 - this.character.position.y;
+        const rad = (this.rotation * Math.PI) / 180;
 
         this.directional = {
             x: x / Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
             y: y / Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
         };
 
-        let rad = (this.rotation * Math.PI) / 180;
-        let r = 25;
-
         this.position = {
-            x: r * Math.cos(rad) + character.position.x,
-            y: r * Math.sin(rad) + character.position.y,
+            x: 25 * Math.cos(rad) + character.position.x,
+            y: 25 * Math.sin(rad) + character.position.y,
         };
     }
 
@@ -203,7 +199,7 @@ class Character extends Entity {
         return true;
     }
 
-    attack() {
+    shootProjectile() {
         const projectile = new Projectile({
             game,
             cursor: this.cursor,
@@ -230,10 +226,10 @@ class Character extends Entity {
         this.view = this.pointer.rotation < 90 && this.pointer.rotation > -90 ? "right" : "left";
 
         switch (true) {
-            case this.input(this.keybinds.attack):
+            case this.input(this.keybinds.shoot):
                 if (this.hasCooldown) break;
                 this.hasCooldown = true;
-                this.attack();
+                this.shootProjectile();
 
                 Game.wait(this.fireRate).then(() => {
                     this.hasCooldown = false;
@@ -319,7 +315,7 @@ const mage = new Character({
             down: "s",
             left: "a",
             right: "d",
-            attack: " ",
+            shoot: " ",
         },
     },
     html: {
