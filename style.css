@@ -82,6 +82,12 @@ body {
   background-image: url(./images/mage-left.png);
 }
 
+.box {
+  height: 64px;
+  width: 64px;
+  background-color: red;
+}
+
 #cursor {
   height: 64px;
   width: 64px;

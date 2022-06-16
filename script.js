@@ -3,7 +3,7 @@ class Game {
     static CANVAS = "map";
 
     constructor() {
-        this.objects = new Set();
+        this.objects = [];
         this.map = document.getElementById("map");
     }
 
@@ -17,8 +17,10 @@ class Game {
 }
 
 class GameObject {
-    constructor({ game, html }) {
-        this.position = { x: 0, y: 0 };
+    constructor({ game, html, options }) {
+        this.collisionEnabled = options?.collisionEnabled || false;
+        this.position = options?.position || { x: 0, y: 0 };
+        this.hitbox = options?.hitbox || { width: 0, height: 0 };
         this.rotation = 0;
         this.element = document.createElement("div");
         this.html = html;
@@ -26,7 +28,7 @@ class GameObject {
         if (html?.id) this.element.id = html.id;
         if (html?.classList) this.element.classList.add(...html.classList);
 
-        game.objects.add(this);
+        game.objects.push(this);
     }
 
     render() {
@@ -48,7 +50,7 @@ class GameObject {
         }
     }
 
-    animate() {
+    updatePosition() {
         let x = this.position.x * Game.PIXEL_SIZE;
         let y = this.position.y * Game.PIXEL_SIZE;
 
@@ -75,7 +77,7 @@ class Cursor extends GameObject {
 
 class Entity extends GameObject {
     constructor({ game, html, options }) {
-        super({ game, html });
+        super({ game, html, options });
         this.hp = options?.hp || 0;
         this.speed = options?.speed || 0;
         this.elapsedTime = 0;
@@ -91,6 +93,15 @@ class Entity extends GameObject {
 
             this.velocity[i] = 0;
         }
+
+        if (this.elapsedTime > this.speed) {
+            this.elapsedTime = this.speed;
+        }
+    }
+
+    move() {
+        this.position.x += this.velocity.x;
+        this.position.y += this.velocity.y;
     }
 }
 
@@ -113,7 +124,7 @@ class CharacterPointer extends Entity {
     }
 
     onAnimation() {
-        this.animate();
+        this.updatePosition();
     }
 }
 
@@ -146,7 +157,7 @@ class Projectile extends Entity {
     }
 
     onAnimation() {
-        this.animate();
+        this.updatePosition();
     }
 }
 
@@ -159,7 +170,6 @@ class Character extends Entity {
         this.isMoving = false;
         this.cursor = cursor;
         this.keybinds = options?.keybinds || {};
-        this.position = options?.position || { x: 0, y: 0 };
         this.maxHp = options?.maxHp || 0;
         this.maxMana = options?.maxMana || 0;
         this.mana = options?.mana || 0;
@@ -232,7 +242,7 @@ class Character extends Entity {
     onUpdate() {
         this.isMoving = true;
         this.elapsedTime += 0.01;
-        this.view = this.pointer.rotation < 90 && this.pointer.rotation > -90 ? "right" : "left";
+        this.view = this.pointer?.rotation < 90 && this.pointer?.rotation > -90 ? "right" : "left";
 
         switch (true) {
             case this.input(this.keybinds.shoot):
@@ -282,21 +292,52 @@ class Character extends Entity {
                 break;
         }
 
+        const filteredGameObjects = [];
+
+        for (const obj of game.objects) {
+            if (obj !== this && obj.collisionEnabled === true && this.collisionEnabled === true) {
+                filteredGameObjects.push(obj);
+            }
+        }
+
+        for (const obj of filteredGameObjects) {
+            if (obj.collisionEnabled && this.collisionEnabled) {
+                if (
+                    this.position.x + this.hitbox.width - obj.position.x > 0 &&
+                    this.position.y + this.hitbox.height - obj.position.y > 0 &&
+                    this.position.x - (obj.position.x + obj.hitbox.width) < 0 &&
+                    this.position.y - (obj.position.y + obj.hitbox.height) < 0
+                ) {
+                    //penis
+                }
+            }
+        }
+
         this.renderVelocity("x", "y");
         this.move();
-
-        if (this.elapsedTime > this.speed) {
-            this.elapsedTime = this.speed;
-        }
     }
 
     onAnimation() {
-        this.animate();
+        this.updatePosition();
+    }
+}
+
+class Box extends Entity {
+    constructor({ game, html, options }) {
+        super({ game, html, options });
+
+        this.load();
+        this.render();
     }
 
-    move() {
-        this.position.x += this.velocity.x;
-        this.position.y += this.velocity.y;
+    onUpdate() {
+        console.log(this.velocity);
+        this.renderVelocity("x", "y");
+        this.move();
+    }
+
+    onAnimation() {
+        this.updatePosition();
     }
 }
 
@@ -314,12 +355,21 @@ const character = new Character({
     game,
     cursor,
     options: {
+        collisionEnabled: true,
         maxHp: 50,
         hp: 50,
         maxMana: 100,
         mana: 100,
         speed: 0.15,
         fireRate: 300,
+        hitbox: {
+            width: 16,
+            height: 16,
+        },
+        position: {
+            x: 16 * 1,
+            y: 16 * 1,
+        },
         keybinds: {
             up: "w",
             down: "s",
@@ -334,129 +384,20 @@ const character = new Character({
     },
 });
 
-class Item {
-    constructor({ name, description, stats, sprite }) {
-        this.sprite = sprite;
-        this.name = name;
-        this.description = description;
-        this.stats = stats;
-    }
-}
-
-const items = [
-    new Item({
-        name: "shaped glass",
-        sprite: "images/shaped-glass.png",
-        description: "multiply damage by 1.5 times, halfs hp",
-        stats: [
-            ["hp", -(character.hp / 2)],
-            ["damage", character.damage * 2],
-        ],
-    }),
-    new Item({
-        name: "shaped glass",
-        sprite: "images/shaped-glass.png",
-        description: "multiply damage by 1.5 times, halfs hp",
-        stats: [
-            ["hp", -(character.hp / 2)],
-            ["damage", character.damage * 2],
-        ],
-    }),
-    new Item({
-        name: "shaped glass",
-        sprite: "images/shaped-glass.png",
-        description: "multiply damage by 1.5 times, halfs hp",
-        stats: [
-            ["hp", -(character.hp / 2)],
-            ["damage", character.damage * 2],
-        ],
-    }),
-    new Item({
-        name: "shaped glass",
-        sprite: "images/shaped-glass.png",
-        description: "multiply damage by 1.5 times, halfs hp",
-        stats: [
-            ["hp", -(character.hp / 2)],
-            ["damage", character.damage * 2],
-        ],
-    }),
-    new Item({
-        name: "shaped glass",
-        sprite: "images/shaped-glass.png",
-        description: "multiply damage by 1.5 times, halfs hp",
-        stats: [
-            ["hp", -(character.hp / 2)],
-            ["damage", character.damage * 2],
-        ],
-    }),
-    new Item({
-        name: "shaped glass",
-        sprite: "images/shaped-glass.png",
-        description: "multiply damage by 1.5 times, halfs hp",
-        stats: [
-            ["hp", -(character.hp / 2)],
-            ["damage", character.damage * 2],
-        ],
-    }),
-    new Item({
-        name: "shaped glass",
-        sprite: "images/shaped-glass.png",
-        description: "multiply damage by 1.5 times, halfs hp",
-        stats: [
-            ["hp", -(character.hp / 2)],
-            ["damage", character.damage * 2],
-        ],
-    }),
-    new Item({
-        name: "shaped glass",
-        sprite: "images/shaped-glass.png",
-        description: "multiply damage by 1.5 times, halfs hp",
-        stats: [
-            ["hp", -(character.hp / 2)],
-            ["damage", character.damage * 2],
-        ],
-    }),
-];
-
-function searchItem(name) {
-    let found = null;
-    for (const item of items) {
-        if (item.name === name) found = item;
-    }
-
-    return found;
-}
-
-function getItemsByTypeAndRarety(type, rarety) {
-    let found = [];
-    for (const item of items) {
-        if (item.type === type && item.rarety === rarety) found.push(item);
-    }
-
-    return found;
-}
-
-const shapedGlass = searchItem("shaped glass");
-
-class Chest {
-    constructor({ mapPosition }) {
-        this.type = type;
-        this.mapPosition = mapPosition;
-        this.items = [];
-    }
-}
-
-class BossRoom {
-    constructor() {
-        this.chests = [
-            new Chest({
-                mapPosition: {
-                    x: 4,
-                    y: 2,
-                },
-            }),
-        ];
-
-        // for loop; get random items out of items list
-    }
-}
+const box = new Box({
+    game,
+    options: {
+        collisionEnabled: true,
+        hitbox: {
+            width: 16,
+            height: 16,
+        },
+        position: {
+            x: 16 * 3,
+            y: 16 * 1,
+        },
+    },
+    html: {
+        classList: ["box"],
+    },
+});
