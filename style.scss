@@ -52,7 +52,7 @@ body {
         background-repeat: no-repeat;
         background-size: contain;
         image-rendering: pixelated;
-        z-index: 100;
+        z-index: 1;
     }
 
     &-default {
@@ -61,6 +61,7 @@ body {
         image-rendering: pixelated;
         background-repeat: none;
         background-size: contain;
+        z-index: 1;
 
         &[view="right"] {
             background-image: url(./images/mage-right.png);
@@ -72,10 +73,13 @@ body {
     }
 }
 
-.box {
+.chest {
     height: 16px * $pixel-size;
     width: 16px * $pixel-size;
-    background-color: red;
+    background-image: url(./images/chest.png);
+    background-repeat: no-repeat;
+    background-size: contain;
+    image-rendering: pixelated;
 }
 
 #cursor {

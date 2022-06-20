@@ -59,7 +59,7 @@ body {
       image-rendering: -moz-crisp-edges;
       image-rendering: -o-pixelated;
       image-rendering: pixelated;
-  z-index: 100;
+  z-index: 1;
 }
 
 .character-default {
@@ -72,6 +72,7 @@ body {
       image-rendering: pixelated;
   background-repeat: none;
   background-size: contain;
+  z-index: 1;
 }
 
 .character-default[view="right"] {
@@ -82,10 +83,17 @@ body {
   background-image: url(./images/mage-left.png);
 }
 
-.box {
+.chest {
   height: 64px;
   width: 64px;
-  background-color: red;
+  background-image: url(./images/chest.png);
+  background-repeat: no-repeat;
+  background-size: contain;
+  -ms-interpolation-mode: nearest-neighbor;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -o-pixelated;
+      image-rendering: pixelated;
 }
 
 #cursor {

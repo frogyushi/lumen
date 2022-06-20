@@ -3,7 +3,7 @@ class Game {
     static CANVAS = "map";
 
     constructor() {
-        this.objects = [];
+        this.objects = new Set();
         this.map = document.getElementById("map");
     }
 
@@ -18,6 +18,7 @@ class Game {
 
 class GameObject {
     constructor({ game, html, options }) {
+        this.defaultDestructable = options?.defaultDestructable || false;
         this.position = options?.position || { x: 0, y: 0 };
         this.size = options?.size || { x: 0, y: 0 };
         this.rotation = 0;
@@ -27,7 +28,7 @@ class GameObject {
         if (html?.id) this.element.id = html.id;
         if (html?.classList) this.element.classList.add(...html.classList);
 
-        game.objects.push(this);
+        game.objects.add(this);
     }
 
     render() {
@@ -77,8 +78,7 @@ class Cursor extends GameObject {
 class Entity extends GameObject {
     constructor({ game, html, options }) {
         super({ game, html, options });
-        this.hp = options?.hp || 0;
-        this.speed = options?.speed || 0;
+        this.stats = options?.stats || {};
         this.elapsedTime = 0;
         this.velocity = { x: 0, y: 0 };
     }
@@ -93,8 +93,8 @@ class Entity extends GameObject {
             this.velocity[i] = 0;
         }
 
-        if (this.elapsedTime > this.speed) {
-            this.elapsedTime = this.speed;
+        if (this.elapsedTime > this.stats.speed) {
+            this.elapsedTime = this.stats.speed;
         }
     }
 
@@ -130,9 +130,9 @@ class CharacterPointer extends Entity {
 class Projectile extends Entity {
     constructor({ game, character, options, html, cursor }) {
         super({ game, html, options });
+        this.game = game;
         this.character = character;
-        this.manaUsage = options?.manaUsage || 0;
-        this.damage = options?.damage || 0;
+        this.stats = options?.stats || {};
         this.rotation = character.pointer.rotation;
         this.active = false;
         this.destroyed = false;
@@ -154,8 +154,8 @@ class Projectile extends Entity {
     }
 
     onUpdate() {
-        const objects = game.objects.filter(
-            (obj) => obj !== this && obj.constructor.name !== "Projectile" && obj.killed !== true
+        const objects = [...game.objects].filter(
+            (obj) => obj !== this && obj.constructor.name !== "Projectile" && obj.destroyed !== true
         );
 
         for (const obj of objects) {
@@ -167,22 +167,25 @@ class Projectile extends Entity {
                 this.position.y + this.size.y > obj.position.y &&
                 obj.position.y + obj.size.y > this.position.y
             ) {
+                if (!obj.defaultDestructable) continue;
+
                 this.active = true;
                 this.element.remove();
+                this.game.objects.delete(this);
 
-                if (obj.hp > 0) {
-                    obj.hp -= this.damage;
+                if (obj.stats.hp > 0) {
+                    obj.stats.hp -= this.stats.damage;
                 }
 
-                if (!(obj.hp > 0)) {
+                if (!(obj.stats.hp > 0)) {
                     obj.element.remove();
-                    obj.killed = true;
+                    this.game.objects.delete(obj);
                 }
             }
         }
 
-        this.position.x += this.directional.x * this.speed;
-        this.position.y += this.directional.y * this.speed;
+        this.position.x += this.directional.x * this.stats.speed;
+        this.position.y += this.directional.y * this.stats.speed;
     }
 
     onAnimation() {
@@ -199,10 +202,7 @@ class Character extends Entity {
         this.isMoving = false;
         this.cursor = cursor;
         this.keybinds = options?.keybinds || {};
-        this.maxHp = options?.maxHp || 0;
-        this.maxMana = options?.maxMana || 0;
-        this.mana = options?.mana || 0;
-        this.fireRate = options?.fireRate || 500;
+        this.stats = options?.stats || {};
 
         this.pointer = new CharacterPointer({
             game,
@@ -215,8 +215,8 @@ class Character extends Entity {
         });
 
         setInterval(() => {
-            if (this.mana < this.maxMana) {
-                this.mana += 1;
+            if (this.stats.mana < this.stats.maxMana) {
+                this.stats.mana++;
             }
         }, 100);
 
@@ -253,21 +253,20 @@ class Character extends Entity {
             cursor: this.cursor,
             character: this,
             options: {
-                damage: 10,
-                size: {
-                    x: 16,
-                    y: 16,
+                stats: {
+                    damage: 10,
+                    speed: 1.5,
+                    manaUsage: 10,
                 },
-                speed: 1.5,
-                manaUsage: 10,
+                size: { x: 16, y: 16 },
             },
             html: {
                 classList: ["fireball"],
             },
         });
 
-        if (this.mana - projectile.manaUsage > 0) {
-            this.mana -= projectile.manaUsage;
+        if (this.stats.mana - projectile.stats.manaUsage > 0) {
+            this.stats.mana -= projectile.stats.manaUsage;
             projectile.load();
             projectile.render();
         }
@@ -285,7 +284,7 @@ class Character extends Entity {
 
                 this.shootProjectile();
 
-                Game.wait(this.fireRate).then(() => {
+                Game.wait(this.stats.fireRate).then(() => {
                     this.hasCooldown = false;
                 });
 
@@ -335,41 +334,47 @@ class Character extends Entity {
     }
 }
 
-class Item {
-    constructor({ name, description, stats, sprite }) {
-        this.sprite = sprite;
-        this.name = name;
-        this.description = description;
-        this.stats = stats;
+class Item extends GameObject {
+    constructor({ character, game, html, options }) {
+        super({ game, html, options });
+        this.character = character;
+        this.options = options;
+
+        this.load();
+        this.render();
     }
 }
 
 class Chest extends Entity {
-    constructor({ game, html, options }) {
+    constructor({ character, game, html, options }) {
         super({ game, html, options });
-        this.destroyed = false;
+        this.character = character;
+        this.opened = false;
+
         this.load();
         this.render();
     }
 
-    dropLoot() {
-        const item = new Item({
-            name: "shaped glass",
-            sprite: "images/shaped-glass.png",
-            description: "multiply damage by 1.5 times, halfs hp",
-            stats: [
-                ["hp", -(character.hp / 2)],
-                ["damage", character.damage * 2],
-            ],
-        });
-
-        console.log(item);
-    }
-
     onUpdate() {
-        if (this.hp <= 0 && this.destroyed === false) {
-            this.destroyed = true;
-            this.dropLoot();
+        if (this.stats.hp <= 0 && this.opened == false) {
+            this.opened = true;
+
+            const item = new Item({
+                game,
+                character,
+                options: {
+                    position: this.position,
+                    name: "medium-rare steak",
+                    sprite: "images/shaped-glass.png",
+                    description: "increase maxHp by 10",
+                    stats: [["maxHp", 10]],
+                },
+                html: {
+                    classList: ["item"],
+                },
+            });
+
+            console.log(item);
         }
 
         this.renderVelocity();
@@ -395,20 +400,17 @@ const character = new Character({
     game,
     cursor,
     options: {
-        maxHp: 50,
-        hp: 50,
-        maxMana: 100,
-        mana: 100,
-        speed: 0.15,
-        fireRate: 300,
-        size: {
-            x: 16,
-            y: 16,
+        stats: {
+            maxHp: 50,
+            hp: 50,
+            maxMana: 100,
+            mana: 100,
+            speed: 0.15,
+            fireRate: 300,
+            baseDamage: 10,
         },
-        position: {
-            x: 16 * 1,
-            y: 16 * 1,
-        },
+        size: { x: 16, y: 16 },
+        position: { x: 16, y: 16 },
         keybinds: {
             up: "w",
             down: "s",
@@ -425,19 +427,17 @@ const character = new Character({
 
 const chest = new Chest({
     game,
+    character,
     options: {
-        maxHp: 50,
-        hp: 50,
-        size: {
-            x: 16,
-            y: 16,
+        defaultDestructable: true,
+        stats: {
+            maxHp: 50,
+            hp: 50,
         },
-        position: {
-            x: 16 * 5,
-            y: 16 * 3,
-        },
+        size: { x: 16, y: 16 },
+        position: { x: 16 * 5, y: 16 * 3 },
     },
     html: {
-        classList: ["box"],
+        classList: ["chest"],
     },
 });
