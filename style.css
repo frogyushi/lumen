@@ -16,7 +16,6 @@ body {
   width: 100%;
   height: 100vh;
   position: absolute;
-  background-color: #fff;
 }
 
 #canvas * {
@@ -44,6 +43,19 @@ body {
       image-rendering: pixelated;
 }
 
+.item {
+  height: 64px;
+  width: 64px;
+  background-image: url(./images/steak.png);
+  background-repeat: no-repeat;
+  background-size: contain;
+  -ms-interpolation-mode: nearest-neighbor;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -o-pixelated;
+      image-rendering: pixelated;
+}
+
 .character-pointer {
   margin-left: 32px;
   -webkit-transform-origin: left;
@@ -59,7 +71,7 @@ body {
       image-rendering: -moz-crisp-edges;
       image-rendering: -o-pixelated;
       image-rendering: pixelated;
-  z-index: 1;
+  z-index: 2;
 }
 
 .character-default {
@@ -72,7 +84,7 @@ body {
       image-rendering: pixelated;
   background-repeat: none;
   background-size: contain;
-  z-index: 1;
+  z-index: 100;
 }
 
 .character-default[view="right"] {
@@ -87,6 +99,45 @@ body {
   height: 64px;
   width: 64px;
   background-image: url(./images/chest.png);
+  background-repeat: no-repeat;
+  background-size: contain;
+  -ms-interpolation-mode: nearest-neighbor;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -o-pixelated;
+      image-rendering: pixelated;
+}
+
+.top-left-wall {
+  height: 64px;
+  width: 64px;
+  background-image: url(./images/top-left-wall.png);
+  background-repeat: no-repeat;
+  background-size: contain;
+  -ms-interpolation-mode: nearest-neighbor;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -o-pixelated;
+      image-rendering: pixelated;
+}
+
+.left-wall {
+  height: 64px;
+  width: 64px;
+  background-image: url(./images/left-wall.png);
+  background-repeat: no-repeat;
+  background-size: contain;
+  -ms-interpolation-mode: nearest-neighbor;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -o-pixelated;
+      image-rendering: pixelated;
+}
+
+.top-wall {
+  height: 64px;
+  width: 64px;
+  background-image: url(./images/top-wall.png);
   background-repeat: no-repeat;
   background-size: contain;
   -ms-interpolation-mode: nearest-neighbor;

@@ -18,6 +18,7 @@ class Game {
 
 class GameObject {
     constructor({ game, html, options }) {
+        this.game = game;
         this.defaultDestructable = options?.defaultDestructable || false;
         this.position = options?.position || { x: 0, y: 0 };
         this.size = options?.size || { x: 0, y: 0 };
@@ -25,8 +26,13 @@ class GameObject {
         this.element = document.createElement("div");
         this.html = html;
 
-        if (html?.id) this.element.id = html.id;
-        if (html?.classList) this.element.classList.add(...html.classList);
+        if (html?.id) {
+            this.element.id = html.id;
+        }
+
+        if (html?.classList) {
+            this.element.classList.add(...html.classList);
+        }
 
         game.objects.add(this);
     }
@@ -48,6 +54,11 @@ class GameObject {
 
             step();
         }
+    }
+
+    delete() {
+        this.element.remove();
+        this.game.objects.delete(this);
     }
 
     updatePosition() {
@@ -175,11 +186,6 @@ class Projectile extends Entity {
 
                 if (obj.stats.hp > 0) {
                     obj.stats.hp -= this.stats.damage;
-                }
-
-                if (!(obj.stats.hp > 0)) {
-                    obj.element.remove();
-                    this.game.objects.delete(obj);
                 }
             }
         }
@@ -325,6 +331,30 @@ class Character extends Entity {
                 break;
         }
 
+        const objects = [...game.objects].filter(
+            (obj) =>
+                obj.constructor.name !== "Character" &&
+                obj.constructor.name !== "Cursor" &&
+                obj.constructor.name !== "Wall"
+        );
+
+        for (const obj of objects) {
+            if (
+                this.position.x + this.size.x > obj.position.x &&
+                obj.position.x + obj.size.x > this.position.x &&
+                this.position.y + this.size.y > obj.position.y &&
+                obj.position.y + -(obj.size.y / 2) > this.position.y
+            ) {
+                this.element.style.zIndex = 0;
+                this.pointer.element.style.zIndex = 0;
+                obj.element.style.zIndex = 1;
+            } else {
+                this.element.style.zIndex = 1;
+                this.pointer.element.style.zIndex = 1;
+                obj.element.style.zIndex = 0;
+            }
+        }
+
         this.renderVelocity();
         this.move();
     }
@@ -342,6 +372,17 @@ class Item extends GameObject {
 
         this.load();
         this.render();
+        this.updatePosition();
+    }
+}
+
+class Wall extends GameObject {
+    constructor({ game, html, options }) {
+        super({ game, html, options });
+
+        this.load();
+        this.render();
+        this.updatePosition();
     }
 }
 
@@ -359,7 +400,7 @@ class Chest extends Entity {
         if (this.stats.hp <= 0 && this.opened == false) {
             this.opened = true;
 
-            const item = new Item({
+            new Item({
                 game,
                 character,
                 options: {
@@ -374,7 +415,7 @@ class Chest extends Entity {
                 },
             });
 
-            console.log(item);
+            this.delete();
         }
 
         this.renderVelocity();
@@ -410,7 +451,7 @@ const character = new Character({
             baseDamage: 10,
         },
         size: { x: 16, y: 16 },
-        position: { x: 16, y: 16 },
+        position: { x: 16 * 3, y: 16 * 3 },
         keybinds: {
             up: "w",
             down: "s",
@@ -435,9 +476,75 @@ const chest = new Chest({
             hp: 50,
         },
         size: { x: 16, y: 16 },
-        position: { x: 16 * 5, y: 16 * 3 },
+        position: { x: 16 * 4, y: 16 * 3 },
     },
     html: {
         classList: ["chest"],
+    },
+});
+
+new Wall({
+    game,
+    options: {
+        size: { x: 16, y: 16 },
+        position: { x: 16, y: 16 },
+    },
+    html: {
+        classList: ["top-left-wall"],
+    },
+});
+
+new Wall({
+    game,
+    options: {
+        size: { x: 16, y: 16 },
+        position: { x: 16 * 2, y: 16 },
+    },
+    html: {
+        classList: ["top-wall"],
+    },
+});
+
+new Wall({
+    game,
+    options: {
+        size: { x: 16, y: 16 },
+        position: { x: 16 * 3, y: 16 },
+    },
+    html: {
+        classList: ["top-wall"],
+    },
+});
+
+new Wall({
+    game,
+    options: {
+        size: { x: 16, y: 16 },
+        position: { x: 16 * 4, y: 16 },
+    },
+    html: {
+        classList: ["top-wall"],
+    },
+});
+
+new Wall({
+    game,
+    options: {
+        size: { x: 16, y: 16 },
+        position: { x: 16, y: 16 * 2 },
+    },
+    html: {
+        classList: ["left-wall"],
+    },
+});
+
+new Wall({
+    game,
+    options: {
+        size: { x: 16, y: 16 },
+        position: { x: 16, y: 16 * 3 },
+    },
+    html: {
+        classList: ["left-wall"],
     },
 });
