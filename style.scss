@@ -6,6 +6,15 @@ $pixel-size: 4;
     margin: 0;
 }
 
+.scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+}
+
+html {
+    position: absolute;
+    overflow: hidden;
+}
+
 body {
     position: absolute;
     height: 100vh;
@@ -36,7 +45,7 @@ body {
     height: 16px * $pixel-size;
     width: 16px * $pixel-size;
     background-repeat: no-repeat;
-    background-size: contain;
+    background-size: 16px * $pixel-size;
     image-rendering: pixelated;
 }
 
@@ -45,7 +54,7 @@ body {
     width: 16px * $pixel-size;
     background-image: url(./images/steak.png);
     background-repeat: no-repeat;
-    background-size: contain;
+    background-size: 16px * $pixel-size;
     image-rendering: pixelated;
 }
 
@@ -57,7 +66,7 @@ body {
     background-image: url(./images/staff.png);
     background-position: right;
     background-repeat: no-repeat;
-    background-size: contain;
+    background-size: 16px * $pixel-size;
     image-rendering: pixelated;
     z-index: 2;
 }
@@ -67,7 +76,7 @@ body {
     width: 16px * $pixel-size;
     image-rendering: pixelated;
     background-repeat: none;
-    background-size: contain;
+    background-size: 16px * $pixel-size;
     z-index: 100;
 
     &[view="right"] {
@@ -84,7 +93,7 @@ body {
     width: 16px * $pixel-size;
     background-image: url(./images/chest.png);
     background-repeat: no-repeat;
-    background-size: contain;
+    background-size: 16px * $pixel-size;
     image-rendering: pixelated;
 }
 
@@ -93,7 +102,7 @@ body {
     width: 16px * $pixel-size;
     background-image: url(./images/top-left-wall.png);
     background-repeat: no-repeat;
-    background-size: contain;
+    background-size: 16px * $pixel-size;
     image-rendering: pixelated;
 }
 
@@ -102,7 +111,7 @@ body {
     width: 16px * $pixel-size;
     background-image: url(./images/left-wall.png);
     background-repeat: no-repeat;
-    background-size: contain;
+    background-size: 16px * $pixel-size;
     image-rendering: pixelated;
 }
 
@@ -111,7 +120,7 @@ body {
     width: 16px * $pixel-size;
     background-image: url(./images/top-wall.png);
     background-repeat: no-repeat;
-    background-size: contain;
+    background-size: 16px * $pixel-size;
     image-rendering: pixelated;
 }
 
@@ -120,18 +129,17 @@ body {
     width: 16px * $pixel-size;
     background-image: url(./images/cursor-default.png);
     background-repeat: no-repeat;
-    background-size: contain;
+    background-size: 16px * $pixel-size;
     image-rendering: pixelated;
     z-index: 1000;
 }
 
-// .floor {
-//     height: 16px * $pixel-size * 5;
-//     width: 16px * $pixel-size * 4;
-//     transform: translate3d(16px * $pixel-size * 2, 16px * $pixel-size*2, 0);
-//     background-image: url(./images/floor.png);
-//     background-repeat: repeat;
-//     background-size: 16px * $pixel-size;
-
-//     image-rendering: pixelated;
-// }
+.floor {
+    height: 16px * $pixel-size * 5;
+    width: 16px * $pixel-size * 5;
+    background-image: url(./images/floor.png);
+    background-repeat: repeat;
+    background-size: 16px * $pixel-size;
+    image-rendering: pixelated;
+    transform: translate3d(16px * 4 * 2, 16px * 4 * 2, 0);
+}
