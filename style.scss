@@ -83,9 +83,10 @@ body {
 }
 
 .chest {
+    transition: transform 80ms ease-in-out;
     height: 16px * $pixel-size;
     width: 16px * $pixel-size;
-    background-image: url(./images/chest.png);
+    background-image: url(./images/chest-full.png);
     background-repeat: no-repeat;
     background-size: 16px * $pixel-size;
     image-rendering: pixelated;
@@ -135,6 +136,23 @@ body {
     background-size: 16px * $pixel-size;
     image-rendering: pixelated;
     z-index: 0;
+}
+
+.effect {
+    background-repeat: no-repeat;
+    background-size: 16px * $pixel-size;
+    image-rendering: pixelated;
+    z-index: 0;
+}
+
+@keyframes fadeOut {
+    0% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
 }
 
 .shadow {

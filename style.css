@@ -99,9 +99,13 @@ body {
 }
 
 .chest {
+  -webkit-transition: -webkit-transform 80ms ease-in-out;
+  transition: -webkit-transform 80ms ease-in-out;
+  transition: transform 80ms ease-in-out;
+  transition: transform 80ms ease-in-out, -webkit-transform 80ms ease-in-out;
   height: 64px;
   width: 64px;
-  background-image: url(./images/chest.png);
+  background-image: url(./images/chest-full.png);
   background-repeat: no-repeat;
   background-size: 64px;
   -ms-interpolation-mode: nearest-neighbor;
@@ -175,6 +179,35 @@ body {
       image-rendering: -o-pixelated;
       image-rendering: pixelated;
   z-index: 0;
+}
+
+.effect {
+  background-repeat: no-repeat;
+  background-size: 64px;
+  -ms-interpolation-mode: nearest-neighbor;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -o-pixelated;
+      image-rendering: pixelated;
+  z-index: 0;
+}
+
+@-webkit-keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 .shadow {

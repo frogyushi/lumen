@@ -11,6 +11,10 @@ class Game {
         return Math.floor(Math.random() * (max - min + 1) + min);
     }
 
+    static getRandomArray(array) {
+        return array[Math.floor(Math.random() * array.length)];
+    }
+
     static wait(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
     }
@@ -19,6 +23,10 @@ class Game {
 class GameObject {
     constructor({ game, html, options }) {
         this.game = game;
+        this.html = html;
+        this.effect = false;
+        this.effectRadius = options?.effectRadius || 0;
+        this.effectUpdateRate = options?.effectUpdateRate || 20;
         this.collision = options?.collision || false;
         this.defaultDestructable = options?.defaultDestructable || false;
         this.position = options?.position || { x: 0, y: 0 };
@@ -26,7 +34,20 @@ class GameObject {
         this.size = options?.size || { x: 0, y: 0 };
         this.rotation = 0;
         this.element = document.createElement("div");
-        this.html = html;
+        this.shadow = options?.shadow
+            ? new Shadow({
+                  game,
+                  object: this,
+                  options: {
+                      position: this.position,
+                      offset: options?.shadowOffset || { x: 0, y: 0 },
+                      size: options?.shadowSize || { x: 0, y: 0 },
+                  },
+                  html: {
+                      classList: ["shadow"],
+                  },
+              })
+            : {};
 
         if (html?.id) {
             this.element.id = html.id;
@@ -96,7 +117,21 @@ class Item extends GameObject {
 
         this.load();
         this.render();
-        this.updatePosition();
+
+        let x = options?.position.x * Game.PIXEL_SIZE;
+        let y = options?.position.y * Game.PIXEL_SIZE;
+
+        this.element.animate(
+            [
+                { transform: `translate3d(${x}px, ${y - 1}px, 0)` },
+                { transform: `translate3d(${x}px, ${y + 2}px, 0)` },
+                { transform: `translate3d(${x}px, ${y - 1}px, 0)` },
+            ],
+            {
+                duration: 1000,
+                iterations: Infinity,
+            }
+        );
     }
 }
 
@@ -106,6 +141,7 @@ class Wall extends GameObject {
 
         this.load();
         this.render();
+
         this.updatePosition();
     }
 }
@@ -129,6 +165,12 @@ class Tile extends GameObject {
             case 11:
                 img = "./images/floor.png";
                 break;
+            case 111:
+                img = "./images/floor-1.png";
+                break;
+            case 112:
+                img = "./images/floor-2.png";
+                break;
             case 12:
                 img = "./images/floor-pebble.png";
                 break;
@@ -140,6 +182,12 @@ class Tile extends GameObject {
                 break;
             case 22:
                 img = "./images/top-wall.png";
+                break;
+            case 221:
+                img = "./images/top-wall-1.png";
+                break;
+            case 222:
+                img = "./images/top-wall-2.png";
                 break;
             case 23:
                 img = "./images/top-right-wall.png";
@@ -224,20 +272,6 @@ class Entity extends GameObject {
         super({ game, html, options });
         this.stats = options?.stats || {};
         this.elapsedTime = 0;
-        this.shadow = options?.shadow
-            ? new Shadow({
-                  game,
-                  object: this,
-                  options: {
-                      position: this.position,
-                      offset: options?.shadowOffset,
-                      size: options?.shadowSize || { x: 0, y: 0 },
-                  },
-                  html: {
-                      classList: ["shadow"],
-                  },
-              })
-            : {};
     }
 
     renderVelocity() {
@@ -261,15 +295,33 @@ class Entity extends GameObject {
     }
 }
 
+class Effect extends GameObject {
+    constructor({ game, html, options }) {
+        super({ game, html, options });
+
+        this.element.style.backgroundColor = options?.trailColor || "#FFFFFF";
+        this.element.style.width = `${this.size.x * Game.PIXEL_SIZE}px`;
+        this.element.style.height = `${this.size.y * Game.PIXEL_SIZE}px`;
+        this.element.style.animation = `fadeOut ${options?.fadeOutDuration || 0}ms`;
+
+        this.load();
+        this.render();
+        this.updatePosition();
+
+        Game.wait(options?.trailLength || 100).then(() => {
+            this.delete();
+        });
+    }
+}
+
 class Projectile extends Entity {
-    constructor({ game, character, options, html, cursor }) {
+    constructor({ game, character, cursor, options, html }) {
         super({ game, html, options });
         this.game = game;
         this.character = character;
         this.stats = options?.stats || {};
         this.rotation = character.pointer.rotation;
         this.active = false;
-        this.destroyed = false;
         this.cursor = { position: cursor.position };
 
         const x = this.cursor.position.x / Game.PIXEL_SIZE - 7 - this.character.position.x;
@@ -289,11 +341,7 @@ class Projectile extends Entity {
 
     onUpdate() {
         const objects = [...game.objects].filter(
-            (obj) =>
-                obj !== this &&
-                obj.constructor.name !== "Projectile" &&
-                obj.collision &&
-                obj.destroyed !== true
+            (obj) => obj !== this && obj.constructor.name !== "Projectile" && obj.collision
         );
 
         for (const obj of objects) {
@@ -306,13 +354,122 @@ class Projectile extends Entity {
                 obj.position.y + obj.size.y > this.position.y
             ) {
                 this.active = true;
+                this.positionOld = { ...this.position };
+
                 this.delete();
 
+                const blast = setInterval(() => {
+                    new Effect({
+                        game: this.game,
+                        options: {
+                            trailLength: 400,
+                            trailColor: Game.getRandomArray(["#fff42d", "#f26262", "#f2bd62"]),
+                            fadeOutDuration: 400,
+                            size: { x: 2, y: 2 },
+                            position: {
+                                x: Game.getRandom(
+                                    this.positionOld.x + 8 - 1,
+                                    this.positionOld.x + 8 + 1
+                                ),
+                                y: Game.getRandom(
+                                    this.positionOld.y + 8 - 1,
+                                    this.positionOld.y + 8 + 1
+                                ),
+                            },
+                        },
+                        html: {
+                            classList: ["effect"],
+                        },
+                    });
+
+                    new Effect({
+                        game: this.game,
+                        options: {
+                            trailLength: 400,
+                            trailColor: Game.getRandomArray([
+                                "#fff42d",
+                                "#f26262",
+                                "#f2bd62",
+                                "#6e6e6e",
+                                "#FFFFFF",
+                            ]),
+                            fadeOutDuration: 1000,
+                            size: { x: 1, y: 1 },
+                            position: {
+                                x: Game.getRandom(
+                                    this.positionOld.x + 8 - 5,
+                                    this.positionOld.x + 8 + 5
+                                ),
+                                y: Game.getRandom(
+                                    this.positionOld.y + 8 - 5,
+                                    this.positionOld.y + 8 + 5
+                                ),
+                            },
+                        },
+                        html: {
+                            classList: ["effect"],
+                        },
+                    });
+                }, 20);
+
+                Game.wait(100).then(() => {
+                    clearInterval(blast);
+                });
+
+                let x = obj.position.x * Game.PIXEL_SIZE;
+                let y = obj.position.y * Game.PIXEL_SIZE;
+
+                if (Number(String(obj?.id).charAt(0)) !== 2) {
+                    obj.element.animate(
+                        [
+                            { transform: `translate3d(${x - 1}px, ${y}px, 0)` },
+                            { transform: `translate3d(${x + 2}px, ${y}px, 0)` },
+                            { transform: `translate3d(${x - 1}px, ${y}px, 0)` },
+                        ],
+                        {
+                            duration: 100,
+                            iterations: 5,
+                        }
+                    );
+                }
+
                 if (!obj.defaultDestructable) continue;
+
                 if (obj.stats?.hp > 0) {
                     obj.stats.hp -= this.stats.damage;
                 }
             }
+        }
+
+        if (this.game.objects.has(this) && !this.effect) {
+            this.effect = true;
+
+            new Effect({
+                game: this.game,
+                options: {
+                    trailLength: 400,
+                    trailColor: Game.getRandomArray(["#fff42d", "#f26262", "#f2bd62"]),
+                    fadeOutDuration: 1000,
+                    size: { x: 1, y: 1 },
+                    position: {
+                        x: Game.getRandom(
+                            this.position.x + 8 - this.effectRadius,
+                            this.position.x + 8 + this.effectRadius
+                        ),
+                        y: Game.getRandom(
+                            this.position.y + 8 - this.effectRadius,
+                            this.position.y + 8 + this.effectRadius
+                        ),
+                    },
+                },
+                html: {
+                    classList: ["effect"],
+                },
+            });
+
+            Game.wait(this.effectUpdateRate).then(() => {
+                this.effect = false;
+            });
         }
 
         this.position.x += this.directional.x * this.stats.speed;
@@ -325,8 +482,8 @@ class Projectile extends Entity {
 }
 
 class CharacterPointer extends Entity {
-    constructor({ game, character, cursor, html }) {
-        super({ game, html });
+    constructor({ game, character, cursor, options, html }) {
+        super({ game, html, options });
         this.cursor = cursor;
         this.character = character;
         this.position = character.position;
@@ -336,6 +493,32 @@ class CharacterPointer extends Entity {
     }
 
     onUpdate() {
+        if (!this.effect) {
+            this.effect = true;
+
+            const rad = (this.rotation * Math.PI) / 180;
+            new Effect({
+                game: this.game,
+                options: {
+                    trailLength: 500,
+                    trailColor: Game.getRandomArray(["#5fcde4", "#aeebf8", "#aeebf8"]),
+                    fadeOutDuration: 500,
+                    size: { x: 1, y: 1 },
+                    position: {
+                        x: 22 * Math.cos(rad) + character.position.x + 7.5 + Game.getRandom(-3, 3),
+                        y: 22 * Math.sin(rad) + character.position.y + 7.5 + Game.getRandom(-3, 3),
+                    },
+                },
+                html: {
+                    classList: ["effect"],
+                },
+            });
+
+            Game.wait(this.effectUpdateRate).then(() => {
+                this.effect = false;
+            });
+        }
+
         const y = this.cursor.position.y / Game.PIXEL_SIZE - 7 - this.position.y;
         const x = this.cursor.position.x / Game.PIXEL_SIZE - 7 - this.position.x;
 
@@ -362,6 +545,9 @@ class Character extends Entity {
             game,
             cursor,
             character: this,
+            options: {
+                effectUpdateRate: 40,
+            },
             html: {
                 classList: ["character-pointer"],
                 parent: "map",
@@ -407,6 +593,8 @@ class Character extends Entity {
             cursor: this.cursor,
             character: this,
             options: {
+                effectRadius: 1,
+                effectUpdateRate: 20,
                 stats: {
                     damage: 10,
                     speed: 1.5,
@@ -491,14 +679,10 @@ class Character extends Entity {
     onUpdate() {
         this.isMoving = true;
         this.elapsedTime += 0.01;
-        this.view = this.pointer?.rotation < 90 && this.pointer?.rotation > -90 ? "right" : "left";
 
         let view = this.pointer?.rotation < 90 && this.pointer?.rotation > -90 ? "right" : "left";
-        if (view === "left") {
-            this.shadow.offset.x = 0;
-        } else {
-            this.shadow.offset.x = -1;
-        }
+        this.view = view;
+        this.shadow.offset.x = view === "left" ? 0 : -1;
 
         switch (true) {
             case this.input(this.keybinds.shoot):
@@ -546,6 +730,34 @@ class Character extends Entity {
             default:
                 this.isMoving = false;
                 break;
+        }
+
+        if (this.isMoving && !this.effect) {
+            this.effect = true;
+
+            new Effect({
+                game: this.game,
+                options: {
+                    trailLength: 400,
+                    trailColor: Game.getRandomArray(["#3c312d", "#574742"]),
+                    fadeOutDuration: 400,
+                    size: { x: 1, y: 1 },
+                    position: {
+                        x: Game.getRandom(
+                            this.position.x + 8 - this.effectRadius,
+                            this.position.x + 8 + this.effectRadius
+                        ),
+                        y: Game.getRandom(this.position.y + 16, this.position.y + 17),
+                    },
+                },
+                html: {
+                    classList: ["effect"],
+                },
+            });
+
+            Game.wait(this.effectUpdateRate).then(() => {
+                this.effect = false;
+            });
         }
 
         const objects = [...game.objects].filter(
@@ -599,6 +811,14 @@ class Chest extends Entity {
     }
 
     onUpdate() {
+        if (this.stats.hp < (this.stats.maxHp / 100) * 75) {
+            this.element.style.backgroundImage = `url(./images/chest-half.png)`;
+        }
+
+        if (this.stats.hp < (this.stats.maxHp / 100) * 25) {
+            this.element.style.backgroundImage = `url(./images/chest-broken.png)`;
+        }
+
         if (this.stats.hp <= 0 && this.opened == false) {
             this.opened = true;
 
@@ -606,6 +826,9 @@ class Chest extends Entity {
                 game,
                 character,
                 options: {
+                    shadow: true,
+                    shadowOffset: { x: 3, y: 10 },
+                    shadowSize: { x: 10 * 4, y: 4 * 4 },
                     position: this.position,
                     name: "medium-rare steak",
                     sprite: "images/shaped-glass.png",
@@ -619,6 +842,37 @@ class Chest extends Entity {
 
             this.shadow.delete();
             this.delete();
+        }
+
+        if (this.game.objects.has(this) && !this.effect) {
+            this.effect = true;
+
+            new Effect({
+                game: this.game,
+                options: {
+                    trailLength: 5000,
+                    trailColor: Game.getRandomArray(["#f2bd62"]),
+                    fadeOutDuration: 5000,
+                    size: { x: 1, y: 1 },
+                    position: {
+                        x: Game.getRandom(
+                            this.position.x + 8 - this.effectRadius,
+                            this.position.x + 8 + this.effectRadius
+                        ),
+                        y: Game.getRandom(
+                            this.position.y + 8 - this.effectRadius,
+                            this.position.y + 8 + this.effectRadius
+                        ),
+                    },
+                },
+                html: {
+                    classList: ["effect"],
+                },
+            });
+
+            Game.wait(this.effectUpdateRate).then(() => {
+                this.effect = false;
+            });
         }
 
         this.renderVelocity();
@@ -635,17 +889,17 @@ const game = new Game();
 const room = new Room({
     stage: [
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 21, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 23],
-        [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [0, 21, 22, 22, 22, 221, 22, 22, 22, 222, 22, 22, 23],
+        [0, 24, 111, 112, 11, 11, 11, 11, 11, 11, 112, 111, 25],
         [0, 24, 11, 11, 11, 11, 11, 13, 11, 12, 11, 11, 25],
         [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [0, 24, 11, 13, 12, 11, 11, 11, 11, 11, 11, 11, 25],
-        [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 12, 11, 25],
+        [0, 24, 11, 13, 12, 11, 112, 111, 11, 11, 11, 11, 25],
+        [0, 24, 11, 11, 11, 11, 111, 111, 112, 11, 11, 11, 25],
+        [0, 24, 11, 11, 11, 11, 11, 111, 11, 11, 12, 11, 25],
         [0, 24, 11, 11, 11, 11, 11, 12, 11, 11, 11, 11, 25],
-        [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [0, 24, 11, 12, 11, 11, 13, 11, 11, 11, 13, 11, 25],
-        [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [0, 24, 11, 111, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [0, 24, 11, 12, 11, 11, 13, 11, 11, 11, 13, 112, 25],
+        [0, 24, 112, 11, 11, 11, 11, 11, 11, 11, 112, 111, 25],
         [0, 26, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 28],
     ],
 });
@@ -665,14 +919,10 @@ const character = new Character({
     cursor,
     options: {
         shadow: true,
-        shadowOffset: {
-            x: -1,
-            y: 12,
-        },
-        shadowSize: {
-            x: 17 * 4,
-            y: 5 * 4,
-        },
+        shadowOffset: { x: -1, y: 12 },
+        shadowSize: { x: 17 * 4, y: 5 * 4 },
+        effectRadius: 2,
+        effectUpdateRate: 50,
         stats: {
             maxHp: 50,
             hp: 50,
@@ -703,14 +953,10 @@ const chest = new Chest({
     character,
     options: {
         shadow: true,
-        shadowOffset: {
-            x: -1,
-            y: 7,
-        },
-        shadowSize: {
-            x: 18 * 4,
-            y: 10 * 4,
-        },
+        shadowOffset: { x: -1, y: 7 },
+        shadowSize: { x: 18 * 4, y: 10 * 4 },
+        effectRadius: 10,
+        effectUpdateRate: 400,
         collision: true,
         defaultDestructable: true,
         stats: {
@@ -718,7 +964,7 @@ const chest = new Chest({
             hp: 50,
         },
         size: { x: 16, y: 16 },
-        position: { x: 16 * 4, y: 16 * 3 },
+        position: { x: 16 * 5, y: 16 * 3 },
     },
     html: {
         classList: ["chest"],
