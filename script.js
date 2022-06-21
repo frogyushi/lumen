@@ -420,17 +420,19 @@ class Projectile extends Entity {
                 let y = obj.position.y * Game.PIXEL_SIZE;
 
                 if (Number(String(obj?.id).charAt(0)) !== 2) {
-                    obj.element.animate(
-                        [
-                            { transform: `translate3d(${x - 1}px, ${y}px, 0)` },
-                            { transform: `translate3d(${x + 2}px, ${y}px, 0)` },
-                            { transform: `translate3d(${x - 1}px, ${y}px, 0)` },
-                        ],
-                        {
-                            duration: 100,
-                            iterations: 5,
-                        }
-                    );
+                    if (obj.constructor.name !== "Frog") {
+                        obj.element.animate(
+                            [
+                                { transform: `translate3d(${x - 1}px, ${y}px, 0)` },
+                                { transform: `translate3d(${x + 2}px, ${y}px, 0)` },
+                                { transform: `translate3d(${x - 1}px, ${y}px, 0)` },
+                            ],
+                            {
+                                duration: 100,
+                                iterations: 5,
+                            }
+                        );
+                    }
                 }
 
                 if (!obj.defaultDestructable) continue;
@@ -785,7 +787,9 @@ class Character extends Entity {
             }
         }
 
-        const colliders = [...game.objects].filter((obj) => obj.collision && obj !== this);
+        const colliders = [...game.objects].filter(
+            (obj) => obj.collision && obj !== this && obj.constructor.name !== "Frog"
+        );
 
         for (const obj of colliders) {
             this.checkCollision(obj);
@@ -802,178 +806,166 @@ class Character extends Entity {
 
 class Frog extends Entity {
     constructor({ game, html, options, character }) {
-      super({ game, html, options });
-      this.isMoving = false;
-      this.stats = options?.stats || {};
-      this.jumpDelay = options?.jumpDelay || 100;
-      this.character = character;
-      this.canJump = 0;
-      this.playerCenter = {
-        x: (this.character.position.x += this.character.size.x / 2),
-        y: (this.character.position.y += this.character.size.y / 2),
-      };
-  
-      this.load();
-      this.render();
-    }
-  
-    getPlayerCenter() {
-      this.playerCenter = {
-        x: (this.character.position.x + this.character.size.x / 2),
-        y: (this.character.position.y + this.character.size.y / 2),
-      };
-    }
-  
-    set view(direction) {
-      this.element.setAttribute("view", direction);
-  }
-  
-    getDirections() {
-      this.getPlayerCenter();
-      const maxDistance = 1;
-  
-      let distX = (this.playerCenter.x - this.position.x) / 100;
-      let distY = (this.playerCenter.y - this.position.y) / 100;
-      let speed = 2;
-      
-  
-      if (distX > 0) {
-          //look right
-          this.shadow.offset.x = -1;
-          this.view ="right";
-          
-          
-      }
-      else if (distX < 0) {
-          //look left
-          this.view="left";
-          this.shadow.offset.x = 1;
-      }
-  
-      let distance = Math.round(Math.sqrt(distX * distX + distY * distY) * 100) / 100;
-      speed = Math.round((speed / distance) * 200) /100;
-      
-      return {x: distX, y: distY, speed: speed};
-    }
-  
-    doCollision(){
-      const objects = [...game.objects].filter(
-          (obj) =>
-              obj.constructor.name !== "Character" &&
-              obj.constructor.name !== "Cursor" &&
-              obj.constructor.name !== "Wall" &&
-              obj.constructor.name !== "Tile"
-      );
-  
-  
-      let colliders = [...game.objects].filter((obj) => obj.collision && obj !== this);
-      colliders.push(this.character)
-  
-      for (const obj of colliders) {
-          this.checkCollision(obj);
-      }
-    }
-  
-    circularCollision(obj) {
-      const playerCenter = {
-          x: this.position.x + this.size.x / 2,
-          y: this.position.y + this.size.y / 2,
-      };
-  
-      let closeEdgeX = playerCenter.x;
-      let closeEdgeY = playerCenter.y;
-  
-      if (playerCenter.x < obj.position.x) {
-          closeEdgeX = obj.position.x;
-      }
-  
-      if (playerCenter.x > obj.position.x + obj.size.x) {
-          closeEdgeX = obj.position.x + obj.size.x;
-      }
-  
-      if (playerCenter.y < obj.position.y) {
-          closeEdgeY = obj.position.y;
-      }
-  
-      if (playerCenter.y > obj.position.y + obj.size.y) {
-          closeEdgeY = obj.position.y + obj.size.y;
-      }
-  
-      const distX = playerCenter.x - closeEdgeX;
-      const distY = playerCenter.y - closeEdgeY;
-      const distance = Math.sqrt(distX * distX + distY * distY);
-  
-      return distance <= 8 ? true : false;
-  }
-  
-  checkCollision(obj) {
-      if (!this.circularCollision(obj)) return;
-  
-      const collider = { x: 0, y: 0 };
-  
-      const up = this.position.y + obj.size.y - obj.position.y;
-      const down = this.position.y - (obj.position.y + obj.size.y);
-      const left = this.position.x - (obj.position.x + obj.size.x);
-      const right = this.position.x + this.size.x - obj.position.x;
-  
-      if (up > 0 && up < 3) {
-          collider.y = up;
-      }
-  
-      if (down < 0 && down > -3) {
-          collider.y = down;
-      }
-  
-      if (right > 0 && right < 3) {
-          collider.x = right;
-      }
-  
-      if (left < 0 && left > -3) {
-          collider.x = left;
-      }
-  
-      this.position.x -= collider.x;
-      this.position.y -= collider.y;
-  }
-  
-    onUpdate() {
-      //destruction
-      if (this.stats.hp <= 0) {
-          this.shadow.delete();
-          this.delete();
-      }
-  
-      this.doCollision();
-  
-      //pathfinding
-      this.getPlayerCenter();
-      if (this.canJump === 0) {
-        const playerDirection = {
-          x: this.getDirections().x,
-          y: this.getDirections().y,
+        super({ game, html, options });
+        this.isMoving = false;
+        this.stats = options?.stats || {};
+        this.jumpDelay = options?.jumpDelay || 100;
+        this.character = character;
+        this.canJump = 0;
+
+        this.playerCenter = {
+            x: (this.character.position.x += this.character.size.x / 2),
+            y: (this.character.position.y += this.character.size.y / 2),
         };
-        this.velocity.x = this.stats.speed * this.getDirections().speed * playerDirection.x;
-        this.velocity.y = this.stats.speed * this.getDirections().speed * playerDirection.y;
-        this.canJump = this.jumpDelay;
-      } else if (this.canJump < this.jumpDelay / 2 && this.canJump != 0) {
-        this.velocity.x = 0;
-        this.velocity.y = 0;
-        this.canJump--;
-      } else {
-        this.canJump--;
-      }
-  
-      this.move();
-      this.renderVelocity();
+
+        this.load();
+        this.render();
     }
-  
+
+    getPlayerCenter() {
+        this.playerCenter = {
+            x: this.character.position.x + this.character.size.x / 2,
+            y: this.character.position.y + this.character.size.y / 2,
+        };
+    }
+
+    set view(direction) {
+        this.element.setAttribute("view", direction);
+    }
+
+    getDirections() {
+        this.getPlayerCenter();
+
+        let distX = (this.playerCenter.x - this.position.x) / 100;
+        let distY = (this.playerCenter.y - this.position.y) / 100;
+        let speed = 2;
+
+        if (distX > 0) {
+            this.shadow.offset.x = -1;
+            this.view = "right";
+        }
+
+        if (distX < 0) {
+            this.shadow.offset.x = 1;
+            this.view = "left";
+        }
+
+        let distance = Math.round(Math.sqrt(distX * distX + distY * distY) * 100) / 100;
+        speed = Math.round((speed / distance) * 200) / 100;
+
+        return { x: distX, y: distY, speed: speed };
+    }
+
+    doCollision() {
+        const colliders = [...game.objects].filter(
+            (obj) =>
+                obj.constructor.name !== "Cursor" &&
+                obj.constructor.name !== "Character" &&
+                obj.collision &&
+                obj !== this
+        );
+
+        for (const obj of colliders) {
+            this.checkCollision(obj);
+        }
+    }
+
+    circularCollision(obj) {
+        const playerCenter = {
+            x: this.position.x + this.size.x / 2,
+            y: this.position.y + this.size.y / 2,
+        };
+
+        let closeEdgeX = playerCenter.x;
+        let closeEdgeY = playerCenter.y;
+
+        if (playerCenter.x < obj.position.x) {
+            closeEdgeX = obj.position.x;
+        }
+
+        if (playerCenter.x > obj.position.x + obj.size.x) {
+            closeEdgeX = obj.position.x + obj.size.x;
+        }
+
+        if (playerCenter.y < obj.position.y) {
+            closeEdgeY = obj.position.y;
+        }
+
+        if (playerCenter.y > obj.position.y + obj.size.y) {
+            closeEdgeY = obj.position.y + obj.size.y;
+        }
+
+        const distX = playerCenter.x - closeEdgeX;
+        const distY = playerCenter.y - closeEdgeY;
+        const distance = Math.sqrt(distX * distX + distY * distY);
+
+        return distance <= 8 ? true : false;
+    }
+
+    checkCollision(obj) {
+        if (!this.circularCollision(obj)) return;
+
+        const collider = { x: 0, y: 0 };
+
+        const up = this.position.y + obj.size.y - obj.position.y;
+        const down = this.position.y - (obj.position.y + obj.size.y);
+        const left = this.position.x - (obj.position.x + obj.size.x);
+        const right = this.position.x + this.size.x - obj.position.x;
+
+        if (up > 0 && up < 3) {
+            collider.y = up;
+        }
+
+        if (down < 0 && down > -3) {
+            collider.y = down;
+        }
+
+        if (right > 0 && right < 3) {
+            collider.x = right;
+        }
+
+        if (left < 0 && left > -3) {
+            collider.x = left;
+        }
+
+        this.position.x -= collider.x;
+        this.position.y -= collider.y;
+    }
+
+    onUpdate() {
+        if (this.stats.hp <= 0) {
+            this.shadow.delete();
+            this.delete();
+        }
+
+        this.doCollision();
+        this.getPlayerCenter();
+
+        if (this.canJump === 0) {
+            const playerDirection = {
+                x: this.getDirections().x,
+                y: this.getDirections().y,
+            };
+
+            this.velocity.x = this.stats.speed * this.getDirections().speed * playerDirection.x;
+            this.velocity.y = this.stats.speed * this.getDirections().speed * playerDirection.y;
+            this.canJump = this.jumpDelay;
+        } else if (this.canJump < this.jumpDelay / 2 && this.canJump != 0) {
+            this.velocity.x = 0;
+            this.velocity.y = 0;
+            this.canJump--;
+        } else {
+            this.canJump--;
+        }
+
+        this.move();
+        this.renderVelocity();
+    }
+
     onAnimation() {
-      this.updatePosition();
+        this.updatePosition();
     }
-  }
-  
-  
-  
+}
 
 class Chest extends Entity {
     constructor({ character, game, html, options }) {
@@ -1148,33 +1140,52 @@ const chest = new Chest({
 
 const frog = new Frog({
     game,
-    html: {
-      parent: "map",
-      classList: ["frog"],
-    },
-    options: {
-      shadow: true,
-      shadowOffset: {
-        x: 0,
-        y: 10,
-      },
-      shadowSize: {
-        x: 16 * 4,
-        y: 5 * 4,
-      },
-      stats: {
-        maxHp: 20,
-        hp: 20,
-        speed: 0.5,
-        attackSpeed: 1,
-        baseDamage: 5,
-      },
-      jumpDelay: 75,
-      collision: true,
-      defaultDestructable: true,
-      size: { x: 16, y: 16 },
-      position: { x: 16 * 5, y: 16 * 5 },
-    },
     character,
-  });
- 
+    options: {
+        shadow: true,
+        shadowOffset: { x: 0, y: 10 },
+        shadowSize: { x: 16 * 4, y: 5 * 4 },
+        stats: {
+            maxHp: 20,
+            hp: 20,
+            speed: 0.5,
+            attackSpeed: 1,
+            baseDamage: 5,
+        },
+        jumpDelay: 75,
+        collision: true,
+        defaultDestructable: true,
+        size: { x: 16, y: 16 },
+        position: { x: 16 * 5, y: 16 * 5 },
+    },
+    html: {
+        parent: "map",
+        classList: ["frog"],
+    },
+});
+
+const frog2 = new Frog({
+    game,
+    character,
+    options: {
+        shadow: true,
+        shadowOffset: { x: 0, y: 10 },
+        shadowSize: { x: 16 * 4, y: 5 * 4 },
+        stats: {
+            maxHp: 20,
+            hp: 20,
+            speed: 0.5,
+            attackSpeed: 1,
+            baseDamage: 5,
+        },
+        jumpDelay: 75,
+        collision: true,
+        defaultDestructable: true,
+        size: { x: 16, y: 16 },
+        position: { x: 16 * 7, y: 16 * 5 },
+    },
+    html: {
+        parent: "map",
+        classList: ["frog"],
+    },
+});
