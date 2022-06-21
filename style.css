@@ -170,18 +170,16 @@ body {
   z-index: 1000;
 }
 
-.floor {
-  height: 320px;
-  width: 320px;
-  background-image: url(./images/floor.png);
-  background-repeat: repeat;
+.tile {
+  height: 64px;
+  width: 64px;
+  background-repeat: no-repeat;
   background-size: 64px;
   -ms-interpolation-mode: nearest-neighbor;
       image-rendering: -webkit-optimize-contrast;
       image-rendering: -moz-crisp-edges;
       image-rendering: -o-pixelated;
       image-rendering: pixelated;
-  -webkit-transform: translate3d(128px, 128px, 0);
-          transform: translate3d(128px, 128px, 0);
+  z-index: 0;
 }
 /*# sourceMappingURL=style.css.map */

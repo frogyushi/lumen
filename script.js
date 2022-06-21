@@ -19,6 +19,7 @@ class Game {
 class GameObject {
     constructor({ game, html, options }) {
         this.game = game;
+        this.collision = options?.collision || false;
         this.defaultDestructable = options?.defaultDestructable || false;
         this.position = options?.position || { x: 0, y: 0 };
         this.size = options?.size || { x: 0, y: 0 };
@@ -105,6 +106,62 @@ class Wall extends GameObject {
         this.load();
         this.render();
         this.updatePosition();
+    }
+}
+
+class Tile extends GameObject {
+    constructor({ game, options, html }) {
+        super({ game, options, html });
+        this.id = options?.id;
+        this.pixel = 16 * Game.PIXEL_SIZE;
+        this.element.style.backgroundImage = `url(${this.getSprite(this.id)})`;
+
+        this.load();
+        this.render();
+        this.updatePosition();
+    }
+
+    getSprite(id) {
+        let img = null;
+        switch (id) {
+            case 11:
+                img = "./images/floor.png";
+                break;
+        }
+        return img;
+    }
+}
+
+class Room {
+    constructor({ stage }) {
+        this.stage = stage;
+    }
+
+    renderTiles() {
+        for (let y = 0; y < this.stage.length; y++) {
+            for (let x = 0; x < this.stage[y].length; x++) {
+                const tile = this.stage[y][Array.isArray(x) ? x[0] : x];
+
+                const a = new Tile({
+                    game,
+                    options: {
+                        id: tile,
+                        size: { x: 16, y: 16 },
+                        position: { x: x * 16, y: y * 16 },
+                        collision: this.hasCollision(tile),
+                    },
+                    html: {
+                        classList: ["tile"],
+                    },
+                });
+
+                console.log(a);
+            }
+        }
+    }
+
+    hasCollision(id) {
+        return Number(String(id).charAt(0)) == 1 ? false : true;
     }
 }
 
@@ -300,6 +357,68 @@ class Character extends Entity {
         }
     }
 
+    circularCollision(obj) {
+        const playerCenter = {
+            x: this.position.x + this.size.x / 2,
+            y: this.position.y + this.size.y / 2,
+        };
+
+        let closeEdgeX = playerCenter.x;
+        let closeEdgeY = playerCenter.y;
+
+        if (playerCenter.x < obj.position.x) {
+            closeEdgeX = obj.position.x;
+        }
+
+        if (playerCenter.x > obj.position.x + obj.size.x) {
+            closeEdgeX = obj.position.x + obj.size.x;
+        }
+
+        if (playerCenter.y < obj.position.y) {
+            closeEdgeY = obj.position.y;
+        }
+
+        if (playerCenter.y > obj.position.y + obj.size.y) {
+            closeEdgeY = obj.position.y + obj.size.y;
+        }
+
+        const distX = playerCenter.x - closeEdgeX;
+        const distY = playerCenter.y - closeEdgeY;
+        const distance = Math.sqrt(distX * distX + distY * distY);
+
+        return distance <= 8 ? true : false;
+    }
+
+    checkCollision(obj) {
+        if (!this.circularCollision(obj)) return;
+
+        const forbiddenPixels = { x: 0, y: 0 };
+
+        const up = this.position.y + obj.size.y - 2 - obj.position.y;
+        const down = this.position.y - (obj.position.y + obj.size.y / 2);
+        const left = this.position.x - (obj.position.x + obj.size.x);
+        const right = this.position.x + this.size.x - obj.position.x;
+
+        if (up > 0 && up < 3) {
+            forbiddenPixels.y = up;
+        }
+
+        if (down < 0 && down > -3) {
+            forbiddenPixels.y = down;
+        }
+
+        if (right > 0 && right < 3) {
+            forbiddenPixels.x = right;
+        }
+
+        if (left < 1 && left > -3) {
+            forbiddenPixels.x = left;
+        }
+
+        this.position.x -= forbiddenPixels.x;
+        this.position.y -= forbiddenPixels.y;
+    }
+
     onUpdate() {
         this.isMoving = true;
         this.elapsedTime += 0.01;
@@ -357,7 +476,8 @@ class Character extends Entity {
             (obj) =>
                 obj.constructor.name !== "Character" &&
                 obj.constructor.name !== "Cursor" &&
-                obj.constructor.name !== "Wall"
+                obj.constructor.name !== "Wall" &&
+                obj.constructor.name !== "Tile"
         );
 
         for (const obj of objects) {
@@ -367,14 +487,20 @@ class Character extends Entity {
                 this.position.y + this.size.y > obj.position.y &&
                 obj.position.y + -(obj.size.y / 2) > this.position.y
             ) {
-                this.element.style.zIndex = 0;
-                this.pointer.element.style.zIndex = 0;
-                obj.element.style.zIndex = 1;
-            } else {
                 this.element.style.zIndex = 1;
                 this.pointer.element.style.zIndex = 1;
-                obj.element.style.zIndex = 0;
+                obj.element.style.zIndex = 2;
+            } else {
+                this.element.style.zIndex = 2;
+                this.pointer.element.style.zIndex = 2;
+                obj.element.style.zIndex = 1;
             }
+        }
+
+        const colliders = [...game.objects].filter((obj) => obj.collision && obj !== this);
+
+        for (const obj of colliders) {
+            this.checkCollision(obj);
         }
 
         this.renderVelocity();
@@ -429,6 +555,25 @@ class Chest extends Entity {
 
 const game = new Game();
 
+const room = new Room({
+    stage: [
+        [21, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 23],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [26, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 28],
+    ],
+});
+
+room.renderTiles();
+
 const cursor = new Cursor({
     game,
     html: {
@@ -470,6 +615,7 @@ const chest = new Chest({
     game,
     character,
     options: {
+        collision: true,
         defaultDestructable: true,
         stats: {
             maxHp: 50,
@@ -480,71 +626,5 @@ const chest = new Chest({
     },
     html: {
         classList: ["chest"],
-    },
-});
-
-new Wall({
-    game,
-    options: {
-        size: { x: 16, y: 16 },
-        position: { x: 16, y: 16 },
-    },
-    html: {
-        classList: ["top-left-wall"],
-    },
-});
-
-new Wall({
-    game,
-    options: {
-        size: { x: 16, y: 16 },
-        position: { x: 16 * 2, y: 16 },
-    },
-    html: {
-        classList: ["top-wall"],
-    },
-});
-
-new Wall({
-    game,
-    options: {
-        size: { x: 16, y: 16 },
-        position: { x: 16 * 3, y: 16 },
-    },
-    html: {
-        classList: ["top-wall"],
-    },
-});
-
-new Wall({
-    game,
-    options: {
-        size: { x: 16, y: 16 },
-        position: { x: 16 * 4, y: 16 },
-    },
-    html: {
-        classList: ["top-wall"],
-    },
-});
-
-new Wall({
-    game,
-    options: {
-        size: { x: 16, y: 16 },
-        position: { x: 16, y: 16 * 2 },
-    },
-    html: {
-        classList: ["left-wall"],
-    },
-});
-
-new Wall({
-    game,
-    options: {
-        size: { x: 16, y: 16 },
-        position: { x: 16, y: 16 * 3 },
-    },
-    html: {
-        classList: ["left-wall"],
     },
 });

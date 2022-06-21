@@ -134,12 +134,11 @@ body {
     z-index: 1000;
 }
 
-.floor {
-    height: 16px * $pixel-size * 5;
-    width: 16px * $pixel-size * 5;
-    background-image: url(./images/floor.png);
-    background-repeat: repeat;
+.tile {
+    height: 16px * $pixel-size;
+    width: 16px * $pixel-size;
+    background-repeat: no-repeat;
     background-size: 16px * $pixel-size;
     image-rendering: pixelated;
-    transform: translate3d(16px * 4 * 2, 16px * 4 * 2, 0);
+    z-index: 0;
 }
