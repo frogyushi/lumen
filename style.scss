@@ -162,3 +162,18 @@ body {
     image-rendering: pixelated;
     z-index: 0;
 }
+
+.frog{
+    height: 16px * $pixel-size;
+    width: 16px * $pixel-size;
+    image-rendering: pixelated;
+    background-repeat: none;
+    background-size: 16px * $pixel-size;
+    &[view="right"] {
+        background-image: url(./images/frog-right.png);
+    }
+
+    &[view="left"] {
+        background-image: url(./images/frog-left.png);
+    }
+}
