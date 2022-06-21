@@ -18,6 +18,7 @@ body {
   position: absolute;
   height: 100vh;
   width: 100%;
+  background-color: #291a29;
   cursor: none;
 }
 
@@ -29,13 +30,6 @@ body {
 
 #canvas * {
   position: absolute;
-}
-
-.map {
-  width: 1472px;
-  height: 640px;
-  background-color: white;
-  margin: 0;
 }
 
 .fireball {
@@ -175,6 +169,18 @@ body {
   width: 64px;
   background-repeat: no-repeat;
   background-size: 64px;
+  -ms-interpolation-mode: nearest-neighbor;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -o-pixelated;
+      image-rendering: pixelated;
+  z-index: 0;
+}
+
+.shadow {
+  background-repeat: no-repeat;
+  background-size: 64px;
+  background-color: rgba(0, 0, 0, 0.133);
   -ms-interpolation-mode: nearest-neighbor;
       image-rendering: -webkit-optimize-contrast;
       image-rendering: -moz-crisp-edges;

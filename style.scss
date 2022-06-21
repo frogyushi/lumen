@@ -19,6 +19,7 @@ body {
     position: absolute;
     height: 100vh;
     width: 100%;
+    background-color: rgb(41, 26, 41);
     cursor: none;
 }
 
@@ -30,13 +31,6 @@ body {
     * {
         position: absolute;
     }
-}
-
-.map {
-    width: 16px * $pixel-size * 23;
-    height: 16px * $pixel-size * 10;
-    background-color: rgb(255, 255, 255);
-    margin: 0;
 }
 
 .fireball {
@@ -139,6 +133,14 @@ body {
     width: 16px * $pixel-size;
     background-repeat: no-repeat;
     background-size: 16px * $pixel-size;
+    image-rendering: pixelated;
+    z-index: 0;
+}
+
+.shadow {
+    background-repeat: no-repeat;
+    background-size: 16px * $pixel-size;
+    background-color: rgba(0, 0, 0, 0.133);
     image-rendering: pixelated;
     z-index: 0;
 }

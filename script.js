@@ -22,6 +22,7 @@ class GameObject {
         this.collision = options?.collision || false;
         this.defaultDestructable = options?.defaultDestructable || false;
         this.position = options?.position || { x: 0, y: 0 };
+        this.velocity = { x: 0, y: 0 };
         this.size = options?.size || { x: 0, y: 0 };
         this.rotation = 0;
         this.element = document.createElement("div");
@@ -123,11 +124,43 @@ class Tile extends GameObject {
 
     getSprite(id) {
         let img = null;
+
         switch (id) {
             case 11:
                 img = "./images/floor.png";
                 break;
+            case 12:
+                img = "./images/floor-pebble.png";
+                break;
+            case 13:
+                img = "./images/floor-grass.png";
+                break;
+            case 21:
+                img = "./images/top-left-wall.png";
+                break;
+            case 22:
+                img = "./images/top-wall.png";
+                break;
+            case 23:
+                img = "./images/top-right-wall.png";
+                break;
+            case 24:
+                img = "./images/left-wall.png";
+                break;
+            case 25:
+                img = "./images/right-wall.png";
+                break;
+            case 26:
+                img = "./images/bottom-left-wall.png";
+                break;
+            case 27:
+                img = "./images/bottom-wall.png";
+                break;
+            case 28:
+                img = "./images/bottom-right-wall.png";
+                break;
         }
+
         return img;
     }
 }
@@ -142,7 +175,7 @@ class Room {
             for (let x = 0; x < this.stage[y].length; x++) {
                 const tile = this.stage[y][Array.isArray(x) ? x[0] : x];
 
-                const a = new Tile({
+                new Tile({
                     game,
                     options: {
                         id: tile,
@@ -154,8 +187,6 @@ class Room {
                         classList: ["tile"],
                     },
                 });
-
-                console.log(a);
             }
         }
     }
@@ -165,12 +196,48 @@ class Room {
     }
 }
 
+class Shadow extends GameObject {
+    constructor({ object, game, html, options }) {
+        super({ game, html, options });
+        this.options = options;
+        this.object = object;
+        this.offset = options?.offset || { x: 0, y: 0 };
+        this.element.style.width = `${this.size.x}px`;
+        this.element.style.height = `${this.size.y}px`;
+
+        this.load();
+        this.render();
+    }
+
+    onAnimation() {
+        this.position = {
+            x: this.options?.position.x + this.offset.x,
+            y: this.options?.position.y + this.offset.y,
+        };
+
+        this.updatePosition();
+    }
+}
+
 class Entity extends GameObject {
     constructor({ game, html, options }) {
         super({ game, html, options });
         this.stats = options?.stats || {};
         this.elapsedTime = 0;
-        this.velocity = { x: 0, y: 0 };
+        this.shadow = options?.shadow
+            ? new Shadow({
+                  game,
+                  object: this,
+                  options: {
+                      position: this.position,
+                      offset: options?.shadowOffset,
+                      size: options?.shadowSize || { x: 0, y: 0 },
+                  },
+                  html: {
+                      classList: ["shadow"],
+                  },
+              })
+            : {};
     }
 
     renderVelocity() {
@@ -222,7 +289,11 @@ class Projectile extends Entity {
 
     onUpdate() {
         const objects = [...game.objects].filter(
-            (obj) => obj !== this && obj.constructor.name !== "Projectile" && obj.destroyed !== true
+            (obj) =>
+                obj !== this &&
+                obj.constructor.name !== "Projectile" &&
+                obj.collision &&
+                obj.destroyed !== true
         );
 
         for (const obj of objects) {
@@ -234,13 +305,11 @@ class Projectile extends Entity {
                 this.position.y + this.size.y > obj.position.y &&
                 obj.position.y + obj.size.y > this.position.y
             ) {
-                if (!obj.defaultDestructable) continue;
-
                 this.active = true;
-                this.element.remove();
-                this.game.objects.delete(this);
+                this.delete();
 
-                if (obj.stats.hp > 0) {
+                if (!obj.defaultDestructable) continue;
+                if (obj.stats?.hp > 0) {
                     obj.stats.hp -= this.stats.damage;
                 }
             }
@@ -332,7 +401,7 @@ class Character extends Entity {
         return true;
     }
 
-    shootProjectile() {
+    cast() {
         const projectile = new Projectile({
             game,
             cursor: this.cursor,
@@ -392,31 +461,31 @@ class Character extends Entity {
     checkCollision(obj) {
         if (!this.circularCollision(obj)) return;
 
-        const forbiddenPixels = { x: 0, y: 0 };
+        const collider = { x: 0, y: 0 };
 
-        const up = this.position.y + obj.size.y - 2 - obj.position.y;
-        const down = this.position.y - (obj.position.y + obj.size.y / 2);
+        const up = this.position.y + obj.size.y - obj.position.y;
+        const down = this.position.y - (obj.position.y + obj.size.y);
         const left = this.position.x - (obj.position.x + obj.size.x);
         const right = this.position.x + this.size.x - obj.position.x;
 
         if (up > 0 && up < 3) {
-            forbiddenPixels.y = up;
+            collider.y = up;
         }
 
         if (down < 0 && down > -3) {
-            forbiddenPixels.y = down;
+            collider.y = down;
         }
 
         if (right > 0 && right < 3) {
-            forbiddenPixels.x = right;
+            collider.x = right;
         }
 
-        if (left < 1 && left > -3) {
-            forbiddenPixels.x = left;
+        if (left < 0 && left > -3) {
+            collider.x = left;
         }
 
-        this.position.x -= forbiddenPixels.x;
-        this.position.y -= forbiddenPixels.y;
+        this.position.x -= collider.x;
+        this.position.y -= collider.y;
     }
 
     onUpdate() {
@@ -424,12 +493,19 @@ class Character extends Entity {
         this.elapsedTime += 0.01;
         this.view = this.pointer?.rotation < 90 && this.pointer?.rotation > -90 ? "right" : "left";
 
+        let view = this.pointer?.rotation < 90 && this.pointer?.rotation > -90 ? "right" : "left";
+        if (view === "left") {
+            this.shadow.offset.x = 0;
+        } else {
+            this.shadow.offset.x = -1;
+        }
+
         switch (true) {
             case this.input(this.keybinds.shoot):
                 if (this.hasCooldown) break;
                 this.hasCooldown = true;
 
-                this.shootProjectile();
+                this.cast();
 
                 Game.wait(this.stats.fireRate).then(() => {
                     this.hasCooldown = false;
@@ -488,11 +564,11 @@ class Character extends Entity {
                 obj.position.y + -(obj.size.y / 2) > this.position.y
             ) {
                 this.element.style.zIndex = 1;
-                this.pointer.element.style.zIndex = 1;
+                this.pointer.element.style.zIndex = 2;
                 obj.element.style.zIndex = 2;
             } else {
                 this.element.style.zIndex = 2;
-                this.pointer.element.style.zIndex = 2;
+                this.pointer.element.style.zIndex = 3;
                 obj.element.style.zIndex = 1;
             }
         }
@@ -541,6 +617,7 @@ class Chest extends Entity {
                 },
             });
 
+            this.shadow.delete();
             this.delete();
         }
 
@@ -557,18 +634,19 @@ const game = new Game();
 
 const room = new Room({
     stage: [
-        [21, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 23],
-        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [26, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 28],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 21, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 23],
+        [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [0, 24, 11, 11, 11, 11, 11, 13, 11, 12, 11, 11, 25],
+        [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [0, 24, 11, 13, 12, 11, 11, 11, 11, 11, 11, 11, 25],
+        [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 12, 11, 25],
+        [0, 24, 11, 11, 11, 11, 11, 12, 11, 11, 11, 11, 25],
+        [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [0, 24, 11, 12, 11, 11, 13, 11, 11, 11, 13, 11, 25],
+        [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [0, 26, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 28],
     ],
 });
 
@@ -586,6 +664,15 @@ const character = new Character({
     game,
     cursor,
     options: {
+        shadow: true,
+        shadowOffset: {
+            x: -1,
+            y: 12,
+        },
+        shadowSize: {
+            x: 17 * 4,
+            y: 5 * 4,
+        },
         stats: {
             maxHp: 50,
             hp: 50,
@@ -615,6 +702,15 @@ const chest = new Chest({
     game,
     character,
     options: {
+        shadow: true,
+        shadowOffset: {
+            x: -1,
+            y: 7,
+        },
+        shadowSize: {
+            x: 18 * 4,
+            y: 10 * 4,
+        },
         collision: true,
         defaultDestructable: true,
         stats: {
