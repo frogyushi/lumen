@@ -137,6 +137,67 @@ class Entity extends GameObject {
     }
 }
 
+class Projectile extends Entity {
+    constructor({ game, character, options, html, cursor }) {
+        super({ game, html, options });
+        this.game = game;
+        this.character = character;
+        this.stats = options?.stats || {};
+        this.rotation = character.pointer.rotation;
+        this.active = false;
+        this.destroyed = false;
+        this.cursor = { position: cursor.position };
+
+        const x = this.cursor.position.x / Game.PIXEL_SIZE - 7 - this.character.position.x;
+        const y = this.cursor.position.y / Game.PIXEL_SIZE - 7 - this.character.position.y;
+        const rad = (this.rotation * Math.PI) / 180;
+
+        this.directional = {
+            x: x / Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
+            y: y / Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)),
+        };
+
+        this.position = {
+            x: 25 * Math.cos(rad) + character.position.x,
+            y: 25 * Math.sin(rad) + character.position.y,
+        };
+    }
+
+    onUpdate() {
+        const objects = [...game.objects].filter(
+            (obj) => obj !== this && obj.constructor.name !== "Projectile" && obj.destroyed !== true
+        );
+
+        for (const obj of objects) {
+            if (this.active) continue;
+
+            if (
+                this.position.x + this.size.x > obj.position.x &&
+                obj.position.x + obj.size.x > this.position.x &&
+                this.position.y + this.size.y > obj.position.y &&
+                obj.position.y + obj.size.y > this.position.y
+            ) {
+                if (!obj.defaultDestructable) continue;
+
+                this.active = true;
+                this.element.remove();
+                this.game.objects.delete(this);
+
+                if (obj.stats.hp > 0) {
+                    obj.stats.hp -= this.stats.damage;
+                }
+            }
+        }
+
+        this.position.x += this.directional.x * this.stats.speed;
+        this.position.y += this.directional.y * this.stats.speed;
+    }
+
+    onAnimation() {
+        this.updatePosition();
+    }
+}
+
 class CharacterPointer extends Entity {
     constructor({ game, character, cursor, html }) {
         super({ game, html });
