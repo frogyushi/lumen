@@ -234,6 +234,9 @@ class Tile extends GameObject {
 class Room {
     constructor({ stage }) {
         this.stage = stage;
+
+        this.createStage();
+        this.renderTiles();
     }
 
     createStage() {
@@ -1154,8 +1157,6 @@ const room = new Room({
         [0, 26, 27, 27, 27, 27, 272, 271, 27, 27, 27, 27, 28],
     ],
 });
-room.createStage();
-room.renderTiles();
 
 const cursor = new Cursor({
     game,
