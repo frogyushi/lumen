@@ -556,12 +556,12 @@ class CharacterPointer extends Entity {
             this.effect = true;
 
             const rad = (this.rotation * Math.PI) / 180;
-            new Effect({
+            const a = new Effect({
                 game: this.game,
                 options: {
-                    trailLength: 500,
+                    trailLength: 700,
                     trailColor: Game.getRandomArray(["#5fcde4", "#aeebf8", "#aeebf8"]),
-                    fadeOutDuration: 500,
+                    fadeOutDuration: 700,
                     size: { x: 1, y: 1 },
                     position: {
                         x: 22 * Math.cos(rad) + character.position.x + 7.5 + Game.getRandom(-3, 3),
@@ -605,7 +605,7 @@ class Character extends Entity {
             cursor,
             character: this,
             options: {
-                effectUpdateRate: 40,
+                effectUpdateRate: 60,
             },
             html: {
                 classList: ["character-pointer"],
@@ -834,13 +834,13 @@ class Character extends Entity {
                 this.position.y + this.size.y > obj.position.y &&
                 obj.position.y + -(obj.size.y / 2) > this.position.y
             ) {
-                this.element.style.zIndex = 1;
+                this.element.style.zIndex = 3;
                 this.pointer.element.style.zIndex = 2;
-                obj.element.style.zIndex = 2;
+                obj.element.style.zIndex = 4;
             } else {
-                this.element.style.zIndex = 2;
-                this.pointer.element.style.zIndex = 3;
-                obj.element.style.zIndex = 1;
+                this.element.style.zIndex = 4;
+                this.pointer.element.style.zIndex = 2;
+                obj.element.style.zIndex = 3;
             }
         }
 

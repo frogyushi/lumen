@@ -87,7 +87,7 @@ body {
       image-rendering: pixelated;
   background-repeat: none;
   background-size: 64px;
-  z-index: 100;
+  z-index: 10;
 }
 
 .character-default[view="right"] {
@@ -189,7 +189,7 @@ body {
       image-rendering: -moz-crisp-edges;
       image-rendering: -o-pixelated;
       image-rendering: pixelated;
-  z-index: 0;
+  z-index: 100;
 }
 
 @-webkit-keyframes fadeOut {

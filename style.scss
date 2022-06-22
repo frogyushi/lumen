@@ -71,7 +71,7 @@ body {
     image-rendering: pixelated;
     background-repeat: none;
     background-size: 16px * $pixel-size;
-    z-index: 100;
+    z-index: 10;
 
     &[view="right"] {
         background-image: url(./images/mage-right.png);
@@ -142,7 +142,7 @@ body {
     background-repeat: no-repeat;
     background-size: 16px * $pixel-size;
     image-rendering: pixelated;
-    z-index: 0;
+    z-index: 100;
 }
 
 @keyframes fadeOut {
