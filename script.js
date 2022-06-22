@@ -237,47 +237,33 @@ class Room {
     }
 
     createStage() {
-        let stage = [
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 21, 22, 22, 22, 221, 22, 22, 22, 222, 22, 22, 23],
-            [0, 24, 111, 112, 11, 11, 11, 11, 11, 11, 112, 111, 25],
-            [0, 24, 11, 11, 11, 11, 11, 13, 11, 12, 11, 11, 25],
-            [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-            [0, 24, 11, 13, 12, 11, 112, 111, 11, 11, 11, 11, 25],
-            [0, 24, 11, 11, 11, 11, 111, 111, 112, 11, 11, 11, 25],
-            [0, 24, 11, 11, 11, 11, 11, 111, 11, 11, 12, 11, 25],
-            [0, 24, 11, 11, 11, 11, 11, 12, 11, 11, 11, 11, 25],
-            [0, 24, 11, 111, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-            [0, 24, 11, 12, 11, 11, 13, 11, 11, 11, 13, 112, 25],
-            [0, 24, 112, 11, 11, 11, 11, 11, 11, 11, 112, 111, 25],
-            [0, 26, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 28],
-        ];
-
         for (let y = 0; y < this.stage.length; y++) {
             for (let x = 0; x < this.stage[y].length; x++) {
-                //console.log(this.stage[y][x]);
-                let first = String(this.stage[y][x])[0];
-                let second = String(this.stage[y][x])[1];
-                
-                switch (first) {
-                    case "1":
-                        if (Game.getRandom(0, 100) > 80 ) {
-                            this.stage[y][x] = Game.getRandom(11, 13);
-                        }                    
-                        break;
-                    
-                        case "2":
-                            if (this.stage[y][x] == 22 || this.stage[y][x] == 24 || this.stage[y][x] == 25 || this.stage[y][x] == 27) {
-                                if (Game.getRandom(0, 100) > 80 ) {
-                                    this.stage[y][x] = Number(first + "" + second + "" + Game.getRandom(1, 2));
-                                    
-                            }
-                            
-                            }                    
-                            break;
+                const [first, second] = String(this.stage[y][x])
+                    .split("")
+                    .map((i) => Number(i));
 
-                        default:
-                            
+                switch (first) {
+                    case 1:
+                        if (Game.getRandom(0, 100) > 80) {
+                            this.stage[y][x] = Number(
+                                String(first) + String(second) + Game.getRandom(1, 2)
+                            );
+                        }
+                        break;
+                    case 2:
+                        if (
+                            this.stage[y][x] == 22 ||
+                            this.stage[y][x] == 24 ||
+                            this.stage[y][x] == 25 ||
+                            this.stage[y][x] == 27
+                        ) {
+                            if (Game.getRandom(0, 100) > 80) {
+                                this.stage[y][x] = Number(
+                                    String(first) + String(second) + Game.getRandom(1, 2)
+                                );
+                            }
+                        }
                         break;
                 }
             }
