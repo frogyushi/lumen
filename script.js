@@ -245,17 +245,13 @@ class Room {
 
                 switch (first) {
                     case 1:
-                        if (
-                            this.stage[y][x] == 11
-                            
-                        ){
-
-                        if (Game.getRandom(0, 100) > 80) {
-                            this.stage[y][x] = Number(
-                                String(first) + String(second) + Game.getRandom(1, 2)
-                            );
+                        if (this.stage[y][x] == 11) {
+                            if (Game.getRandom(0, 100) > 80) {
+                                this.stage[y][x] = Number(
+                                    String(first) + String(second) + Game.getRandom(1, 2)
+                                );
+                            }
                         }
-                    }
                         break;
                     case 2:
                         if (
@@ -999,7 +995,7 @@ class Frog extends Entity {
         this.doCollision();
         this.getPlayerCenter();
 
-        if (!this.effect && !this.canJump) {
+        if (this.game.objects.has(this) && !this.effect && !this.canJump) {
             this.effect = true;
 
             for (let i = 0; i < 5; i++) {
