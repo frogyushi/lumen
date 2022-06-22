@@ -195,6 +195,9 @@ class Tile extends GameObject {
             case 24:
                 img = "./images/left-wall.png";
                 break;
+            case 251:
+                img = "./images/right-wall-gate.png";
+                break;
             case 25:
                 img = "./images/right-wall.png";
                 break;
@@ -216,6 +219,30 @@ class Tile extends GameObject {
 class Room {
     constructor({ stage }) {
         this.stage = stage;
+    }
+
+    createStage() {
+        let stage = [
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 21, 22, 22, 22, 221, 22, 22, 22, 222, 22, 22, 23],
+            [0, 24, 111, 112, 11, 11, 11, 11, 11, 11, 112, 111, 25],
+            [0, 24, 11, 11, 11, 11, 11, 13, 11, 12, 11, 11, 25],
+            [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+            [0, 24, 11, 13, 12, 11, 112, 111, 11, 11, 11, 11, 25],
+            [0, 24, 11, 11, 11, 11, 111, 111, 112, 11, 11, 11, 25],
+            [0, 24, 11, 11, 11, 11, 11, 111, 11, 11, 12, 11, 25],
+            [0, 24, 11, 11, 11, 11, 11, 12, 11, 11, 11, 11, 25],
+            [0, 24, 11, 111, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+            [0, 24, 11, 12, 11, 11, 13, 11, 11, 11, 13, 112, 25],
+            [0, 24, 112, 11, 11, 11, 11, 11, 11, 11, 112, 111, 25],
+            [0, 26, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 28],
+        ];
+
+        for (let y = 0; y < stage.length; y++) {
+            for (let x = 0; x < y.length; x++) {
+                stage[y][x];
+            }
+        }
     }
 
     renderTiles() {
@@ -851,7 +878,7 @@ class Frog extends Entity {
         }
 
         let distance = Math.round(Math.sqrt(distX * distX + distY * distY) * 100) / 100;
-        speed = Math.round((speed / distance) * 200) / 100;
+        speed = Math.round((speed / distance) * 100 * Game.getRandom(1, 3)) / 100;
 
         return { x: distX, y: distY, speed: speed };
     }
@@ -1061,7 +1088,7 @@ const room = new Room({
         [0, 24, 11, 11, 11, 11, 11, 13, 11, 12, 11, 11, 25],
         [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
         [0, 24, 11, 13, 12, 11, 112, 111, 11, 11, 11, 11, 25],
-        [0, 24, 11, 11, 11, 11, 111, 111, 112, 11, 11, 11, 25],
+        [0, 24, 11, 11, 11, 11, 111, 111, 112, 11, 11, 11, 251],
         [0, 24, 11, 11, 11, 11, 11, 111, 11, 11, 12, 11, 25],
         [0, 24, 11, 11, 11, 11, 11, 12, 11, 11, 11, 11, 25],
         [0, 24, 11, 111, 11, 11, 11, 11, 11, 11, 11, 11, 25],
@@ -1100,7 +1127,7 @@ const character = new Character({
             baseDamage: 10,
         },
         size: { x: 16, y: 16 },
-        position: { x: 16 * 3, y: 16 * 3 },
+        position: { x: 16 * Game.getRandom(3, 10), y: 16 * Game.getRandom(3, 10) },
         keybinds: {
             up: "w",
             down: "s",
@@ -1131,7 +1158,7 @@ const chest = new Chest({
             hp: 50,
         },
         size: { x: 16, y: 16 },
-        position: { x: 16 * 5, y: 16 * 3 },
+        position: { x: 16 * Game.getRandom(3, 10), y: 16 * Game.getRandom(3, 10) },
     },
     html: {
         classList: ["chest"],
@@ -1156,7 +1183,7 @@ const frog = new Frog({
         collision: true,
         defaultDestructable: true,
         size: { x: 16, y: 16 },
-        position: { x: 16 * 5, y: 16 * 5 },
+        position: { x: 16 * Game.getRandom(2, 11), y: 16 * Game.getRandom(2, 11) },
     },
     html: {
         parent: "map",
@@ -1178,11 +1205,11 @@ const frog2 = new Frog({
             attackSpeed: 1,
             baseDamage: 5,
         },
-        jumpDelay: 75,
+        jumpDelay: 100,
         collision: true,
         defaultDestructable: true,
         size: { x: 16, y: 16 },
-        position: { x: 16 * 7, y: 16 * 5 },
+        position: { x: 16 * Game.getRandom(2, 11), y: 16 * Game.getRandom(2, 11) },
     },
     html: {
         parent: "map",
