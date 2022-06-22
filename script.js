@@ -25,6 +25,7 @@ class GameObject {
         this.game = game;
         this.html = html;
         this.effect = false;
+        this.enableEffect = true;
         this.effectRadius = options?.effectRadius || 0;
         this.effectUpdateRate = options?.effectUpdateRate || 20;
         this.collision = options?.collision || false;
@@ -552,11 +553,11 @@ class CharacterPointer extends Entity {
     }
 
     onUpdate() {
-        if (!this.effect) {
+        if (!this.effect && this.enableEffect) {
             this.effect = true;
-
             const rad = (this.rotation * Math.PI) / 180;
-            const a = new Effect({
+
+            new Effect({
                 game: this.game,
                 options: {
                     trailLength: 700,
@@ -599,6 +600,8 @@ class Character extends Entity {
         this.cursor = cursor;
         this.keybinds = options?.keybinds || {};
         this.stats = options?.stats || {};
+        this.equipment = 1;
+        this.inventory = { 1: "staff", 2: "blade" };
 
         this.pointer = new CharacterPointer({
             game,
@@ -646,30 +649,36 @@ class Character extends Entity {
         return true;
     }
 
-    cast() {
-        const projectile = new Projectile({
-            game,
-            cursor: this.cursor,
-            character: this,
-            options: {
-                effectRadius: 1,
-                effectUpdateRate: 20,
-                stats: {
-                    damage: 10,
-                    speed: 1.5,
-                    manaUsage: 10,
-                },
-                size: { x: 16, y: 16 },
-            },
-            html: {
-                classList: ["fireball"],
-            },
-        });
+    useItem(slot) {
+        switch (slot) {
+            case 1:
+                const projectile = new Projectile({
+                    game,
+                    cursor: this.cursor,
+                    character: this,
+                    options: {
+                        effectRadius: 1,
+                        effectUpdateRate: 20,
+                        stats: {
+                            damage: 10,
+                            speed: 1.5,
+                            manaUsage: 10,
+                        },
+                        size: { x: 16, y: 16 },
+                    },
+                    html: {
+                        classList: ["fireball"],
+                    },
+                });
 
-        if (this.stats.mana - projectile.stats.manaUsage > 0) {
-            this.stats.mana -= projectile.stats.manaUsage;
-            projectile.load();
-            projectile.render();
+                if (this.stats.mana - projectile.stats.manaUsage > 0) {
+                    this.stats.mana -= projectile.stats.manaUsage;
+                    projectile.load();
+                    projectile.render();
+                }
+                break;
+            case 2:
+                break;
         }
     }
 
@@ -743,12 +752,24 @@ class Character extends Entity {
         this.view = view;
         this.shadow.offset.x = view === "left" ? 0 : -1;
 
+        this.pointer.element.style.backgroundImage = `url(./images/${
+            this.inventory[this.equipment]
+        }-${view}.png)`;
+
         switch (true) {
+            case this.input("1"):
+                this.pointer.enableEffect = true;
+                this.equipment = 1;
+                break;
+            case this.input("2"):
+                this.pointer.enableEffect = false;
+                this.equipment = 2;
+                break;
             case this.input(this.keybinds.shoot):
                 if (this.hasCooldown) break;
                 this.hasCooldown = true;
 
-                this.cast();
+                this.useItem(this.equipment);
 
                 Game.wait(this.stats.fireRate).then(() => {
                     this.hasCooldown = false;
@@ -823,6 +844,7 @@ class Character extends Entity {
             (obj) =>
                 obj.constructor.name !== "Character" &&
                 obj.constructor.name !== "Cursor" &&
+                obj.constructor.name !== "Effect" &&
                 obj.constructor.name !== "Wall" &&
                 obj.constructor.name !== "Tile"
         );
@@ -834,13 +856,13 @@ class Character extends Entity {
                 this.position.y + this.size.y > obj.position.y &&
                 obj.position.y + -(obj.size.y / 2) > this.position.y
             ) {
-                this.element.style.zIndex = 3;
-                this.pointer.element.style.zIndex = 2;
-                obj.element.style.zIndex = 4;
+                this.element.style.zIndex = 0;
+                this.pointer.element.style.zIndex = 1;
+                obj.element.style.zIndex = 1;
             } else {
-                this.element.style.zIndex = 4;
-                this.pointer.element.style.zIndex = 2;
-                obj.element.style.zIndex = 3;
+                this.element.style.zIndex = 1;
+                this.pointer.element.style.zIndex = 1;
+                obj.element.style.zIndex = 0;
             }
         }
 
@@ -869,6 +891,7 @@ class Frog extends Entity {
         this.jumpDelay = options?.jumpDelay || 100;
         this.character = character;
         this.canJump = 0;
+        this.jumpView = "left";
 
         this.playerCenter = {
             x: (this.character.position.x += this.character.size.x / 2),
@@ -900,11 +923,13 @@ class Frog extends Entity {
         if (distX > 0) {
             this.shadow.offset.x = -1;
             this.view = "right";
+            this.jumpView = "right";
         }
 
         if (distX < 0) {
             this.shadow.offset.x = 1;
             this.view = "left";
+            this.jumpView = "left";
         }
 
         let distance = Math.round(Math.sqrt(distX * distX + distY * distY) * 100) / 100;
@@ -998,6 +1023,12 @@ class Frog extends Entity {
         this.doCollision();
         this.getPlayerCenter();
 
+        let view = this.jumpView;
+
+        this.element.style.backgroundImage = `url(./images/frog-${view}${
+            this.jumping ? "-jump" : ""
+        }.png)`;
+
         if (this.game.objects.has(this) && !this.effect && !this.canJump) {
             this.effect = true;
 
@@ -1029,6 +1060,7 @@ class Frog extends Entity {
         }
 
         if (this.canJump === 0) {
+            this.jumping = true;
             const playerDirection = {
                 x: this.getDirections().x,
                 y: this.getDirections().y,
@@ -1040,6 +1072,7 @@ class Frog extends Entity {
         } else if (this.canJump < this.jumpDelay / 2 && this.canJump != 0) {
             this.velocity.x = 0;
             this.velocity.y = 0;
+            this.jumping = false;
             this.canJump--;
         } else {
             this.canJump--;
