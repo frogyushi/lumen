@@ -195,17 +195,32 @@ class Tile extends GameObject {
             case 24:
                 img = "./images/left-wall.png";
                 break;
-            case 251:
-                img = "./images/right-wall-gate.png";
+            case 241:
+                img = "./images/left-wall-1.png";
+                break;
+            case 242:
+                img = "./images/left-wall-2.png";
                 break;
             case 25:
                 img = "./images/right-wall.png";
+                break;
+            case 251:
+                img = "./images/right-wall-1.png";
+                break;
+            case 252:
+                img = "./images/right-wall-2.png";
                 break;
             case 26:
                 img = "./images/bottom-left-wall.png";
                 break;
             case 27:
                 img = "./images/bottom-wall.png";
+                break;
+            case 271:
+                img = "./images/bottom-wall-1.png";
+                break;
+            case 272:
+                img = "./images/bottom-wall-2.png";
                 break;
             case 28:
                 img = "./images/bottom-right-wall.png";
@@ -968,6 +983,36 @@ class Frog extends Entity {
         this.doCollision();
         this.getPlayerCenter();
 
+        if (!this.effect && !this.canJump) {
+            this.effect = true;
+
+            for (let i = 0; i < 5; i++) {
+                new Effect({
+                    game: this.game,
+                    options: {
+                        trailLength: 400,
+                        trailColor: Game.getRandomArray(["#3c312d", "#574742"]),
+                        fadeOutDuration: 400,
+                        size: { x: 1, y: 1 },
+                        position: {
+                            x: Game.getRandom(
+                                this.position.x + 8 - this.effectRadius,
+                                this.position.x + 8 + this.effectRadius
+                            ),
+                            y: Game.getRandom(this.position.y + 14, this.position.y + 15),
+                        },
+                    },
+                    html: {
+                        classList: ["effect"],
+                    },
+                });
+            }
+
+            Game.wait(this.effectUpdateRate).then(() => {
+                this.effect = false;
+            });
+        }
+
         if (this.canJump === 0) {
             const playerDirection = {
                 x: this.getDirections().x,
@@ -1005,11 +1050,11 @@ class Chest extends Entity {
     }
 
     onUpdate() {
-        if (this.stats.hp < (this.stats.maxHp / 100) * 75) {
+        if (this.stats.hp < (this.stats.maxHp / 100) * 66.6) {
             this.element.style.backgroundImage = `url(./images/chest-half.png)`;
         }
 
-        if (this.stats.hp < (this.stats.maxHp / 100) * 25) {
+        if (this.stats.hp < (this.stats.maxHp / 100) * 33.3) {
             this.element.style.backgroundImage = `url(./images/chest-broken.png)`;
         }
 
@@ -1085,16 +1130,16 @@ const room = new Room({
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 21, 22, 22, 22, 221, 22, 22, 22, 222, 22, 22, 23],
         [0, 24, 111, 112, 11, 11, 11, 11, 11, 11, 112, 111, 25],
-        [0, 24, 11, 11, 11, 11, 11, 13, 11, 12, 11, 11, 25],
+        [0, 242, 11, 11, 11, 11, 11, 13, 11, 12, 11, 11, 25],
         [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [0, 24, 11, 13, 12, 11, 112, 111, 11, 11, 11, 11, 25],
-        [0, 24, 11, 11, 11, 11, 111, 111, 112, 11, 11, 11, 251],
+        [0, 24, 11, 13, 12, 11, 112, 111, 11, 11, 11, 11, 252],
+        [0, 24, 11, 11, 11, 11, 111, 111, 112, 11, 11, 11, 25],
         [0, 24, 11, 11, 11, 11, 11, 111, 11, 11, 12, 11, 25],
         [0, 24, 11, 11, 11, 11, 11, 12, 11, 11, 11, 11, 25],
-        [0, 24, 11, 111, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [0, 242, 11, 111, 11, 11, 11, 11, 11, 11, 11, 11, 25],
         [0, 24, 11, 12, 11, 11, 13, 11, 11, 11, 13, 112, 25],
         [0, 24, 112, 11, 11, 11, 11, 11, 11, 11, 112, 111, 25],
-        [0, 26, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 28],
+        [0, 26, 27, 27, 27, 27, 272, 271, 27, 27, 27, 27, 28],
     ],
 });
 
@@ -1142,7 +1187,7 @@ const character = new Character({
     },
 });
 
-const chest = new Chest({
+new Chest({
     game,
     character,
     options: {
@@ -1154,8 +1199,8 @@ const chest = new Chest({
         collision: true,
         defaultDestructable: true,
         stats: {
-            maxHp: 50,
-            hp: 50,
+            maxHp: 100,
+            hp: 100,
         },
         size: { x: 16, y: 16 },
         position: { x: 16 * Game.getRandom(3, 10), y: 16 * Game.getRandom(3, 10) },
@@ -1165,16 +1210,41 @@ const chest = new Chest({
     },
 });
 
-const frog = new Frog({
+new Chest({
+    game,
+    character,
+    options: {
+        shadow: true,
+        shadowOffset: { x: -1, y: 7 },
+        shadowSize: { x: 18 * 4, y: 10 * 4 },
+        effectRadius: 10,
+        effectUpdateRate: 400,
+        collision: true,
+        defaultDestructable: true,
+        stats: {
+            maxHp: 100,
+            hp: 100,
+        },
+        size: { x: 16, y: 16 },
+        position: { x: 16 * Game.getRandom(3, 10), y: 16 * Game.getRandom(3, 10) },
+    },
+    html: {
+        classList: ["chest"],
+    },
+});
+
+new Frog({
     game,
     character,
     options: {
         shadow: true,
         shadowOffset: { x: 0, y: 10 },
         shadowSize: { x: 16 * 4, y: 5 * 4 },
+        effectRadius: 5,
+        effectUpdateRate: 100,
         stats: {
-            maxHp: 20,
-            hp: 20,
+            maxHp: 50,
+            hp: 50,
             speed: 0.5,
             attackSpeed: 1,
             baseDamage: 5,
@@ -1191,7 +1261,7 @@ const frog = new Frog({
     },
 });
 
-const frog2 = new Frog({
+new Frog({
     game,
     character,
     options: {
@@ -1199,12 +1269,14 @@ const frog2 = new Frog({
         shadowOffset: { x: 0, y: 10 },
         shadowSize: { x: 16 * 4, y: 5 * 4 },
         stats: {
-            maxHp: 20,
-            hp: 20,
+            maxHp: 50,
+            hp: 50,
             speed: 0.5,
             attackSpeed: 1,
             baseDamage: 5,
         },
+        effectRadius: 5,
+        effectUpdateRate: 100,
         jumpDelay: 100,
         collision: true,
         defaultDestructable: true,
