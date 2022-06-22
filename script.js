@@ -253,9 +253,33 @@ class Room {
             [0, 26, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 28],
         ];
 
-        for (let y = 0; y < stage.length; y++) {
-            for (let x = 0; x < y.length; x++) {
-                stage[y][x];
+        for (let y = 0; y < this.stage.length; y++) {
+            for (let x = 0; x < this.stage[y].length; x++) {
+                //console.log(this.stage[y][x]);
+                let first = String(this.stage[y][x])[0];
+                let second = String(this.stage[y][x])[1];
+                
+                switch (first) {
+                    case "1":
+                        if (Game.getRandom(0, 100) > 80 ) {
+                            this.stage[y][x] = Game.getRandom(11, 13);
+                        }                    
+                        break;
+                    
+                        case "2":
+                            if (this.stage[y][x] == 22 || this.stage[y][x] == 24 || this.stage[y][x] == 25 || this.stage[y][x] == 27) {
+                                if (Game.getRandom(0, 100) > 80 ) {
+                                    this.stage[y][x] = Number(first + "" + second + "" + Game.getRandom(1, 2));
+                                    
+                            }
+                            
+                            }                    
+                            break;
+
+                        default:
+                            
+                        break;
+                }
             }
         }
     }
@@ -263,7 +287,7 @@ class Room {
     renderTiles() {
         for (let y = 0; y < this.stage.length; y++) {
             for (let x = 0; x < this.stage[y].length; x++) {
-                const tile = this.stage[y][Array.isArray(x) ? x[0] : x];
+                const tile = this.stage[y][x];
 
                 new Tile({
                     game,
@@ -1142,7 +1166,7 @@ const room = new Room({
         [0, 26, 27, 27, 27, 27, 272, 271, 27, 27, 27, 27, 28],
     ],
 });
-
+room.createStage();
 room.renderTiles();
 
 const cursor = new Cursor({
