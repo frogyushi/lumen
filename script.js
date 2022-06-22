@@ -245,11 +245,17 @@ class Room {
 
                 switch (first) {
                     case 1:
+                        if (
+                            this.stage[y][x] == 11
+                            
+                        ){
+
                         if (Game.getRandom(0, 100) > 80) {
                             this.stage[y][x] = Number(
                                 String(first) + String(second) + Game.getRandom(1, 2)
                             );
                         }
+                    }
                         break;
                     case 2:
                         if (
