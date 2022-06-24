@@ -23,6 +23,7 @@ class GameObject {
     constructor({ game, html, data }) {
         this.game = game;
         this.html = html;
+        this.isMoving = false;
         this.element = document.createElement("div");
         this.hasCollision = data?.hasCollision || false;
         this.isDefaultDestructable = false;
@@ -276,57 +277,61 @@ class Entity extends GameObject {
 }
 
 class Projectile extends Entity {
-    constructor({ game, html, data, cursor, character }) {
+    constructor({ game, html, data, cursor }) {
         super({ game, html, data });
-        this.game = game;
-        this.character = character;
-        this.rotation = character.pointer.rotation;
-        this.stats = data?.stats;
-        this.cursor = { position: cursor.position };
-        this.position = character.position;
-        this.isMoving = true;
+        this.rotation = data?.rotation;
+        this.position = data?.position;
 
-        const x = this.cursor.position.x / Game.PIXEL_SIZE - 7 - this.position.x;
-        const y = this.cursor.position.y / Game.PIXEL_SIZE - 7 - this.position.y;
+        const x = cursor.position.x / Game.PIXEL_SIZE - 7 - this.position.x;
+        const y = cursor.position.y / Game.PIXEL_SIZE - 7 - this.position.y;
         const v = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
         const rad = (this.rotation * Math.PI) / 180;
 
         this.vector = { x: x / v, y: y / v };
+
         this.position = {
             x: 25 * Math.cos(rad) + this.position.x,
             y: 25 * Math.sin(rad) + this.position.y,
         };
     }
 
-    onUpdate() {
-        const filter = ["Projectile"];
-        const objects = [...game.objects]
-            .filter((o) => o !== this && o.hasCollision)
-            .filter((o) => filter.includes(o.constructor.name) === false);
-
-        for (const object of objects) {
-            if (!this.isMoving) continue;
-
-            if (
-                this.position.x + this.size.x > object.position.x &&
-                object.position.x + object.size.x > this.position.x &&
-                this.position.y + this.size.y > object.position.y &&
-                object.position.y + object.size.y > this.position.y
-            ) {
-                this.isMoving = false;
-                this.position[0] = { ...this.position };
-                this.delete();
-
-                if (object.defaultDestructable) {
-                    if (object.stats?.hp > 0) {
-                        object.stats.hp -= this.stats.damage;
-                    }
-                }
-            }
-        }
-
+    updateVector() {
         this.position.x += this.vector.x * this.stats.speed;
         this.position.y += this.vector.y * this.stats.speed;
+    }
+}
+
+class Fireball extends Projectile {
+    constructor({ game, html, data, cursor }) {
+        super({ game, html, data, cursor });
+        this.game = game;
+        this.stats = data?.stats;
+        this.isMoving = true;
+    }
+
+    onUpdate() {
+        [...game.objects]
+            .filter((o) => o !== this && o.hasCollision)
+            .filter((o) => ["Projectile"].includes(o.constructor.name) === false)
+            .forEach((o) => {
+                if (this.isMoving === false) return;
+
+                if (
+                    this.position.x + this.size.x > o.position.x + 7 &&
+                    o.position.x + o.size.x - 7 > this.position.x &&
+                    this.position.y + this.size.y > o.position.y + 7 &&
+                    o.position.y + o.size.y - 7 > this.position.y
+                ) {
+                    this.isMoving = false;
+                    this.delete();
+
+                    if (o.stats?.hp > 0 && o.defaultDestructable) {
+                        o.stats.hp -= this.stats.damage;
+                    }
+                }
+            });
+
+        this.updateVector();
     }
 
     onAnimation() {
@@ -367,12 +372,12 @@ class Character extends Entity {
         super({ game, html, data });
         this.id = html?.id || null;
         this.keypresses = new Set();
-        this.equipment = 1;
         this.hasCooldown = false;
         this.isMoving = false;
         this.cursor = cursor;
         this.keybinds = data?.keybinds || {};
         this.stats = data?.stats || {};
+        this.selectedSpell = 1;
 
         this.pointer = new CharacterPointer({
             game,
@@ -400,52 +405,51 @@ class Character extends Entity {
     }
 
     castSpell() {
-        const p = new Projectile({
-            game,
-            cursor: this.cursor,
-            character: this,
-            data: {
-                sprite: "./images/fireball.png",
-                stats: {
-                    damage: 10,
-                    speed: 1.5,
-                    manaUsage: 10,
-                },
-                size: { x: 16, y: 16 },
-            },
-            html: { classList: ["fireball"] },
-        });
+        let spell = null;
 
-        if (this.stats.mana - p.stats.manaUsage > 0) {
-            this.stats.mana -= p.stats.manaUsage;
-            p.loadEvents();
-            p.renderElement();
+        switch (this.selectedSpell) {
+            case 1:
+                spell = new Fireball({
+                    game,
+                    cursor: this.cursor,
+                    character: this,
+                    data: {
+                        sprite: "./images/fireball.png",
+                        rotation: this.pointer.rotation,
+                        position: this.position,
+                        size: { x: 16, y: 16 },
+                        stats: {
+                            damage: 10,
+                            speed: 1.5,
+                            manaUsage: 10,
+                        },
+                    },
+                    html: { classList: ["fireball"] },
+                });
+                break;
         }
+
+        if (this.stats.mana - spell.stats.manaUsage < 0) return;
+        this.stats.mana -= spell.stats.manaUsage;
+
+        spell.loadEvents();
+        spell.renderElement();
     }
 
     onUpdate() {
+        const view = this.pointer.rotation < 90 && this.pointer.rotation > -90 ? "right" : "left";
+
         this.isMoving = true;
         this.acceleration += 0.01;
-
-        const view = this.pointer.rotation < 90 && this.pointer.rotation > -90 ? "right" : "left";
-        const equipment = { 1: "staff", 2: "blade" }[this.equipment];
-
+        this.pointer.setSprite(`./images/staff-${view}.png`);
+        this.setSprite(`./images/mage-${view}.png`);
         this.setView(view);
 
-        this.pointer.setSprite(`./images/${equipment}-${view}.png`);
-        this.setSprite(`./images/mage-${view}.png`);
-
         switch (true) {
-            case this.input(this.keybinds.slot[1]):
-                this.equipment = 1;
-                break;
-            case this.input(this.keybinds.slot[2]):
-                this.equipment = 2;
-                break;
             case this.input(this.keybinds.useEquipment):
                 if (this.hasCooldown) break;
                 this.hasCooldown = true;
-                if (this.equipment === 1) this.castSpell();
+                this.castSpell();
                 Game.count(this.stats.fireRate).then(() => (this.hasCooldown = false));
                 break;
         }
@@ -485,27 +489,23 @@ class Character extends Entity {
         }
 
         const filter = ["Character", "Cursor", "Effect", "Tile"];
-
-        const objects = [...game.objects]
-            .filter((o) => o !== this)
-            .filter((o) => filter.includes(o.constructor.name) === false);
-
-        for (const object of objects) {
-            if (
-                this.position.x + this.size.x > object.position.x &&
-                object.position.x + object.size.x > this.position.x &&
-                this.position.y + this.size.y > object.position.y &&
-                object.position.y + -(object.size.y / 2) > this.position.y
-            ) {
-                this.element.style.zIndex = 0;
-                this.pointer.element.style.zIndex = 1;
-                object.element.style.zIndex = 1;
-            } else {
-                this.element.style.zIndex = 1;
-                this.pointer.element.style.zIndex = 1;
-                object.element.style.zIndex = 0;
-            }
-        }
+        [...game.objects]
+            .filter((o) => o !== this && o.hasCollision)
+            .filter((o) => filter.includes(o.constructor.name) === false)
+            .forEach((o) => {
+                if (
+                    this.position.x + this.size.x > o.position.x &&
+                    o.position.x + o.size.x > this.position.x &&
+                    this.position.y + this.size.y > o.position.y &&
+                    o.position.y + -(o.size.y / 2) > this.position.y
+                ) {
+                    this.element.style.zIndex = 0;
+                    o.element.style.zIndex = 1;
+                } else {
+                    this.element.style.zIndex = 1;
+                    o.element.style.zIndex = 0;
+                }
+            });
 
         [...game.objects]
             .filter((o) => o !== this && o.hasCollision)
@@ -664,27 +664,24 @@ const character = new Character({
     game,
     cursor,
     data: {
+        size: { x: 16, y: 16 },
+        position: { x: 16 * Game.getRandom(3, 10), y: 16 * Game.getRandom(3, 10) },
         stats: {
             maxHp: 50,
             hp: 50,
             maxMana: 100,
-            mana: 100,
+            mana: 1000000000,
             speed: 0.15,
             fireRate: 300,
             baseDamage: 10,
         },
-        size: { x: 16, y: 16 },
-        position: { x: 16 * Game.getRandom(3, 10), y: 16 * Game.getRandom(3, 10) },
         keybinds: {
             up: "w",
             down: "s",
             left: "a",
             right: "d",
             useEquipment: " ",
-            slot: {
-                1: "1",
-                2: "2",
-            },
+            slot: { 1: "1", 2: "2" },
         },
     },
     html: {
@@ -699,6 +696,9 @@ new Frog({
     data: {
         hasCollision: true,
         isDefaultDestructable: true,
+        jumpDelay: 75,
+        size: { x: 16, y: 16 },
+        position: { x: 16 * Game.getRandom(2, 11), y: 16 * Game.getRandom(2, 11) },
         stats: {
             maxHp: 50,
             hp: 50,
@@ -706,9 +706,6 @@ new Frog({
             attackSpeed: 1,
             baseDamage: 5,
         },
-        jumpDelay: 75,
-        size: { x: 16, y: 16 },
-        position: { x: 16 * Game.getRandom(2, 11), y: 16 * Game.getRandom(2, 11) },
     },
     html: { classList: ["frog"] },
 });
@@ -719,6 +716,9 @@ new Frog({
     data: {
         hasCollision: true,
         isDefaultDestructable: true,
+        jumpDelay: 75,
+        size: { x: 16, y: 16 },
+        position: { x: 16 * Game.getRandom(2, 11), y: 16 * Game.getRandom(2, 11) },
         stats: {
             maxHp: 50,
             hp: 50,
@@ -726,9 +726,6 @@ new Frog({
             attackSpeed: 1,
             baseDamage: 5,
         },
-        jumpDelay: 75,
-        size: { x: 16, y: 16 },
-        position: { x: 16 * Game.getRandom(2, 11), y: 16 * Game.getRandom(2, 11) },
     },
     html: { classList: ["frog"] },
 });
@@ -740,12 +737,12 @@ new Chest({
         sprite: "./images/chest-full.png",
         hasCollision: true,
         isDefaultDestructable: true,
+        size: { x: 16, y: 16 },
+        position: { x: 16 * Game.getRandom(3, 10), y: 16 * Game.getRandom(3, 10) },
         stats: {
             maxHp: 100,
             hp: 100,
         },
-        size: { x: 16, y: 16 },
-        position: { x: 16 * Game.getRandom(3, 10), y: 16 * Game.getRandom(3, 10) },
     },
     html: { classList: ["chest"] },
 });
@@ -757,12 +754,12 @@ new Chest({
         sprite: "./images/chest-full.png",
         hasCollision: true,
         isDefaultDestructable: true,
+        size: { x: 16, y: 16 },
+        position: { x: 16 * Game.getRandom(3, 10), y: 16 * Game.getRandom(3, 10) },
         stats: {
             maxHp: 100,
             hp: 100,
         },
-        size: { x: 16, y: 16 },
-        position: { x: 16 * Game.getRandom(3, 10), y: 16 * Game.getRandom(3, 10) },
     },
     html: { classList: ["chest"] },
 });
