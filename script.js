@@ -1,16 +1,21 @@
 class Game {
     static PIXEL_SIZE = 4;
     static UPDATE_RATE = 1000 / 60;
+    static ROOM_OFFSET = { x: 1, y: 1 };
 
     constructor() {
         this.objects = new Set();
     }
 
-    static getRandom(min, max) {
+    static random(min, max) {
         return Math.floor(Math.random() * (max - min + 1) + min);
     }
 
-    static getRandomArray(array) {
+    static css(element, css) {
+        return Object.assign(element.style, css);
+    }
+
+    static sample(array) {
         return array[Math.floor(Math.random() * array.length)];
     }
 
@@ -27,7 +32,7 @@ class GameObject {
         this.element = document.createElement("div");
         this.hasCollision = data?.hasCollision || false;
         this.isDefaultDestructable = false;
-        this.sprite = data?.sprite || "./images/none.png";
+        this.sprite = data?.sprite;
         this.rotation = 0;
         this.position = data?.position || { x: 0, y: 0 };
         this.velocity = { x: 0, y: 0 };
@@ -40,6 +45,14 @@ class GameObject {
         this.game.objects.add(this);
     }
 
+    setDefaultEffect(callback, data) {
+        if (this.game.objects.has(this) && this.effect == false) {
+            this.effect = true;
+            callback();
+            Game.count(data.duration).then(() => (this.effect = false));
+        }
+    }
+
     setSprite(url) {
         this.sprite = url;
         this.element.style.backgroundImage = `url(${url})`;
@@ -50,8 +63,6 @@ class GameObject {
     }
 
     loadEvents() {
-        this.onLoad?.();
-
         if (typeof this.onUpdate === "function") {
             setInterval(() => this.onUpdate(), Game.UPDATE_RATE);
         }
@@ -131,8 +142,8 @@ class Tile extends GameObject {
         11: "./images/floor.png",
         111: "./images/floor-1.png",
         112: "./images/floor-2.png",
-        12: "./images/floor-pebble.png",
-        13: "./images/floor-grass.png",
+        121: "./images/floor-pebble.png",
+        122: "./images/floor-grass.png",
         21: "./images/top-left-wall.png",
         22: "./images/top-wall.png",
         221: "./images/top-wall-1.png",
@@ -183,13 +194,16 @@ class Room {
                 const tile = this.layout[y][x];
                 if (tile === 0) continue;
                 const type = Array.from(String(tile), Number)[0];
-                if ([11, 12, 13, 22, 24, 25, 27].includes(tile)) {
-                    if (Game.getRandom(0, 100) > 80) {
-                        const id1 = String(type) + Game.getRandom(1, 3);
-                        const id2 = String(tile) + Game.getRandom(1, 2);
-                        this.layout[y][x] = Tile.SPRITES.hasOwnProperty(id2)
-                            ? Number(id2)
-                            : Number(id1);
+
+                if ([22, 24, 25, 27].includes(tile)) {
+                    if (Game.random(0, 100) > 80) {
+                        this.layout[y][x] = String(tile) + Game.random(1, 2);
+                    }
+                }
+
+                if ([11, 12].includes(tile)) {
+                    if (Game.random(0, 100) > 80) {
+                        this.layout[y][x] = String(Game.sample([11, 12])) + Game.random(1, 2);
                     }
                 }
 
@@ -198,7 +212,10 @@ class Room {
                     data: {
                         id: this.layout[y][x],
                         size: { x: 16, y: 16 },
-                        position: { x: x * 16, y: y * 16 },
+                        position: {
+                            x: x * 16 + Game.ROOM_OFFSET.x * 16,
+                            y: y * 16 + Game.ROOM_OFFSET.y * 16,
+                        },
                         hasCollision: type === 1 ? false : true,
                     },
                     html: { classList: ["tile"] },
@@ -279,8 +296,11 @@ class Entity extends GameObject {
 class Projectile extends Entity {
     constructor({ game, html, data, cursor }) {
         super({ game, html, data });
+        this.game = game;
         this.rotation = data?.rotation;
         this.position = data?.position;
+        this.hasCollided = false;
+        this.effect = false;
 
         const x = cursor.position.x / Game.PIXEL_SIZE - 7 - this.position.x;
         const y = cursor.position.y / Game.PIXEL_SIZE - 7 - this.position.y;
@@ -293,6 +313,33 @@ class Projectile extends Entity {
             x: 25 * Math.cos(rad) + this.position.x,
             y: 25 * Math.sin(rad) + this.position.y,
         };
+    }
+
+    onCollision(callback, data) {
+        [...this.game.objects]
+            .filter((o) => o !== this && o.hasCollision)
+            .filter((o) => ["Projectile"].includes(o.constructor.name) === false)
+            .forEach((o) => {
+                if (this.isMoving === false) return;
+
+                if (
+                    this.position.x + this.size.x > o.position.x + 7 &&
+                    o.position.x + o.size.x - 7 > this.position.x &&
+                    this.position.y + this.size.y > o.position.y + 7 &&
+                    o.position.y + o.size.y - 7 > this.position.y
+                ) {
+                    this.isMoving = false;
+                    this.position[0] = { ...this.position };
+                    this.delete();
+
+                    const r = setInterval(() => callback(), data.iterations);
+                    Game.count(data.duration).then(() => clearInterval(r));
+
+                    if (o.stats?.hp > 0 && o.defaultDestructable) {
+                        o.stats.hp -= this.stats.damage;
+                    }
+                }
+            });
     }
 
     updateVector() {
@@ -310,26 +357,71 @@ class Fireball extends Projectile {
     }
 
     onUpdate() {
-        [...game.objects]
-            .filter((o) => o !== this && o.hasCollision)
-            .filter((o) => ["Projectile"].includes(o.constructor.name) === false)
-            .forEach((o) => {
-                if (this.isMoving === false) return;
+        this.onCollision(
+            () => {
+                new Effect({
+                    game: this.game,
+                    data: {
+                        updateRate: 400,
+                        color: Game.sample(["#fff42d", "#f26262", "#f2bd62"]),
+                        duration: 400,
+                        size: { x: 2, y: 2 },
+                        position: {
+                            x: Game.random(this.position.x + 8 - 1, this.position.x + 8 + 1),
+                            y: Game.random(this.position.y + 8 - 1, this.position.y + 8 + 1),
+                        },
+                    },
+                    html: {
+                        classList: ["effect"],
+                    },
+                });
 
-                if (
-                    this.position.x + this.size.x > o.position.x + 7 &&
-                    o.position.x + o.size.x - 7 > this.position.x &&
-                    this.position.y + this.size.y > o.position.y + 7 &&
-                    o.position.y + o.size.y - 7 > this.position.y
-                ) {
-                    this.isMoving = false;
-                    this.delete();
+                new Effect({
+                    game: this.game,
+                    data: {
+                        updateRate: 400,
+                        color: Game.sample(["#fff42d", "#f26262", "#f2bd62", "#6e6e6e", "#FFFFFF"]),
+                        duration: 1000,
+                        size: { x: 1, y: 1 },
+                        position: {
+                            x: Game.random(this.position.x + 8 - 5, this.position.x + 8 + 5),
+                            y: Game.random(this.position.y + 8 - 5, this.position.y + 8 + 5),
+                        },
+                    },
+                    html: {
+                        classList: ["effect"],
+                    },
+                });
+            },
+            {
+                iterations: 20,
+                duration: 100,
+            }
+        );
 
-                    if (o.stats?.hp > 0 && o.defaultDestructable) {
-                        o.stats.hp -= this.stats.damage;
-                    }
-                }
-            });
+        this.setDefaultEffect(
+            () => {
+                new Effect({
+                    game: this.game,
+                    data: {
+                        updateRate: 400,
+                        color: Game.sample(["#fff42d", "#f26262", "#f2bd62"]),
+                        duration: 1000,
+                        size: { x: 1, y: 1 },
+                        position: {
+                            x: Game.random(this.position.x + 8 - 1, this.position.x + 8 + 1),
+                            y: Game.random(this.position.y + 8 - 1, this.position.y + 8 + 1),
+                        },
+                    },
+                    html: {
+                        classList: ["effect"],
+                    },
+                });
+            },
+            {
+                duration: 20,
+            }
+        );
 
         this.updateVector();
     }
@@ -345,6 +437,7 @@ class CharacterPointer extends Entity {
         this.cursor = cursor;
         this.character = character;
         this.position = character.position;
+        this.effect = false;
 
         this.loadEvents();
         this.renderElement();
@@ -353,8 +446,34 @@ class CharacterPointer extends Entity {
     onUpdate() {
         if (this.effect === false && this.enableEffect) {
             this.effect = true;
-            Game.wait(this.effectUpdateRate).then(() => (this.effect = false));
+            Game.count(this.effectUpdateRate).then(() => (this.effect = false));
         }
+
+        this.setDefaultEffect(
+            () => {
+                const rad = (this.rotation * Math.PI) / 180;
+
+                new Effect({
+                    game: this.game,
+                    data: {
+                        updateRate: 700,
+                        color: Game.sample(["#5fcde4", "#aeebf8", "#aeebf8"]),
+                        duration: 700,
+                        size: { x: 1, y: 1 },
+                        position: {
+                            x: 22 * Math.cos(rad) + character.position.x + 7.5 + Game.random(-3, 3),
+                            y: 22 * Math.sin(rad) + character.position.y + 7.5 + Game.random(-3, 3),
+                        },
+                    },
+                    html: {
+                        classList: ["effect"],
+                    },
+                });
+            },
+            {
+                duration: 50,
+            }
+        );
 
         const y = this.cursor.position.y / Game.PIXEL_SIZE - 7 - this.position.y;
         const x = this.cursor.position.x / Game.PIXEL_SIZE - 7 - this.position.x;
@@ -364,6 +483,25 @@ class CharacterPointer extends Entity {
 
     onAnimation() {
         this.updatePosition();
+    }
+}
+
+class Effect extends GameObject {
+    constructor({ game, html, data }) {
+        super({ game, html, data });
+
+        Game.css(this.element, {
+            backgroundColor: data?.color,
+            width: this.size.x * Game.PIXEL_SIZE + "px",
+            height: this.size.y * Game.PIXEL_SIZE + "px",
+            animation: `fadeOut ${data?.duration || 0}ms`,
+        });
+
+        this.loadEvents();
+        this.renderElement();
+        this.updatePosition();
+
+        Game.count(data?.updateRate || 100).then(() => this.delete());
     }
 }
 
@@ -378,6 +516,7 @@ class Character extends Entity {
         this.keybinds = data?.keybinds || {};
         this.stats = data?.stats || {};
         this.selectedSpell = 1;
+        this.effect = false;
 
         this.pointer = new CharacterPointer({
             game,
@@ -387,6 +526,12 @@ class Character extends Entity {
                 classList: ["character-pointer"],
             },
         });
+
+        setInterval(() => {
+            if (this.stats.mana < this.stats.maxMana) {
+                this.stats.mana++;
+            }
+        }, 100);
 
         window.addEventListener("keydown", (e) => this.keypresses.add(e.key));
         window.addEventListener("keyup", (e) => this.keypresses.delete(e.key));
@@ -446,7 +591,7 @@ class Character extends Entity {
         this.setView(view);
 
         switch (true) {
-            case this.input(this.keybinds.useEquipment):
+            case this.input(this.keybinds.cast):
                 if (this.hasCooldown) break;
                 this.hasCooldown = true;
                 this.castSpell();
@@ -488,8 +633,34 @@ class Character extends Entity {
                 break;
         }
 
+        if (this.isMoving) {
+            this.setDefaultEffect(
+                () => {
+                    new Effect({
+                        game: this.game,
+                        data: {
+                            updateRate: 300,
+                            color: Game.sample(["#3c312d", "#574742"]),
+                            duration: 300,
+                            size: { x: 1, y: 1 },
+                            position: {
+                                x: Game.random(this.position.x + 8 - 2, this.position.x + 8 + 2),
+                                y: Game.random(this.position.y + 16, this.position.y + 17),
+                            },
+                        },
+                        html: {
+                            classList: ["effect"],
+                        },
+                    });
+                },
+                {
+                    duration: 50,
+                }
+            );
+        }
+
         const filter = ["Character", "Cursor", "Effect", "Tile"];
-        [...game.objects]
+        [...this.game.objects]
             .filter((o) => o !== this && o.hasCollision)
             .filter((o) => filter.includes(o.constructor.name) === false)
             .forEach((o) => {
@@ -507,7 +678,7 @@ class Character extends Entity {
                 }
             });
 
-        [...game.objects]
+        [...this.game.objects]
             .filter((o) => o !== this && o.hasCollision)
             .filter((o) => ["Frog"].includes(o.constructor.name) === false)
             .forEach((c) => this.addCollider(c));
@@ -526,6 +697,7 @@ class Chest extends Entity {
         super({ game, html, data });
         this.character = character;
         this.opened = false;
+        this.effect = false;
 
         this.loadEvents();
         this.renderElement();
@@ -544,6 +716,30 @@ class Chest extends Entity {
             this.opened = true;
             this.delete();
         }
+
+        this.setDefaultEffect(
+            () => {
+                new Effect({
+                    game: this.game,
+                    data: {
+                        updateRate: 1000,
+                        color: "#f2bd62",
+                        duration: 1000,
+                        size: { x: 1, y: 1 },
+                        position: {
+                            x: Game.random(this.position.x + 8 - 10, this.position.x + 8 + 10),
+                            y: Game.random(this.position.y + 8 - 10, this.position.y + 8 + 10),
+                        },
+                    },
+                    html: {
+                        classList: ["effect"],
+                    },
+                });
+            },
+            {
+                duration: 300,
+            }
+        );
 
         this.renderVelocity();
         this.move();
@@ -564,7 +760,7 @@ class Frog extends Entity {
         this.duration = 0;
         this.active = false;
         this.view = "left";
-        this.type = Game.getRandom(1, 2);
+        this.type = Game.random(1, 2);
 
         this.loadEvents();
         this.renderElement();
@@ -574,14 +770,12 @@ class Frog extends Entity {
         const x = (this.center.x - this.position.x) / 100;
         const y = (this.center.y - this.position.y) / 100;
         const d = Math.round(Math.sqrt(x * x + y * y) * 100) / 100;
-        const speed = Math.round((2 / d) * 100 * Game.getRandom(1, 2)) / 100;
+        const speed = Math.round((2 / d) * 100 * Game.random(1, 2)) / 100;
 
         this.view = x > 0 ? "right" : "left";
 
         return { x, y, speed };
     }
-
-    bounce() {}
 
     onUpdate() {
         this.center = {
@@ -600,16 +794,16 @@ class Frog extends Entity {
         const direction = { x: this.data().x, y: this.data().y };
         const filter = ["Character", "Cursor"];
 
-        [...game.objects]
+        [...this.game.objects]
             .filter((o) => o !== this && o.hasCollision)
             .filter((o) => filter.includes(o.constructor.name) === false)
-            .forEach((o) => this.addCollider(o, () => this.bounce()));
+            .forEach((o) => this.addCollider(o));
 
         if (this.duration === 0) {
             this.active = true;
             this.velocity.x = this.stats.speed * this.data().speed * direction.x;
             this.velocity.y = this.stats.speed * this.data().speed * direction.y;
-            this.duration = Game.getRandom(this.delay, this.delay + 40);
+            this.duration = Game.random(this.delay, this.delay + 40);
         }
 
         if (this.duration < this.delay / 2) {
@@ -635,19 +829,18 @@ const game = new Game();
 const room = new Room({
     game,
     layout: [
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 21, 22, 22, 22, 221, 22, 22, 22, 222, 22, 22, 23],
-        [0, 24, 111, 112, 11, 11, 11, 11, 11, 11, 112, 111, 25],
-        [0, 242, 11, 11, 11, 11, 11, 13, 11, 12, 11, 11, 25],
-        [0, 24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [0, 24, 11, 13, 12, 11, 112, 111, 11, 11, 11, 11, 252],
-        [0, 24, 11, 11, 11, 11, 111, 111, 112, 11, 11, 11, 25],
-        [0, 24, 11, 11, 11, 11, 11, 111, 11, 11, 12, 11, 25],
-        [0, 24, 11, 11, 11, 11, 11, 12, 11, 11, 11, 11, 25],
-        [0, 242, 11, 111, 11, 11, 11, 11, 11, 11, 11, 11, 25],
-        [0, 24, 11, 12, 11, 11, 13, 11, 11, 11, 13, 112, 25],
-        [0, 24, 112, 11, 11, 11, 11, 11, 11, 11, 112, 111, 25],
-        [0, 26, 27, 27, 27, 27, 272, 271, 27, 27, 27, 27, 28],
+        [21, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 23],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [24, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 25],
+        [26, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 28],
     ],
 });
 
@@ -665,7 +858,10 @@ const character = new Character({
     cursor,
     data: {
         size: { x: 16, y: 16 },
-        position: { x: 16 * Game.getRandom(3, 10), y: 16 * Game.getRandom(3, 10) },
+        position: {
+            x: 16 * Game.random(3, 10) + Game.ROOM_OFFSET.x * 16,
+            y: 16 * Game.random(3, 10) + Game.ROOM_OFFSET.y * 16,
+        },
         stats: {
             maxHp: 50,
             hp: 50,
@@ -680,8 +876,7 @@ const character = new Character({
             down: "s",
             left: "a",
             right: "d",
-            useEquipment: " ",
-            slot: { 1: "1", 2: "2" },
+            cast: " ",
         },
     },
     html: {
@@ -698,7 +893,10 @@ new Frog({
         isDefaultDestructable: true,
         jumpDelay: 75,
         size: { x: 16, y: 16 },
-        position: { x: 16 * Game.getRandom(2, 11), y: 16 * Game.getRandom(2, 11) },
+        position: {
+            x: 16 * Game.random(2, 9) + Game.ROOM_OFFSET.x * 16,
+            y: 16 * Game.random(2, 9) + Game.ROOM_OFFSET.y * 16,
+        },
         stats: {
             maxHp: 50,
             hp: 50,
@@ -718,7 +916,10 @@ new Frog({
         isDefaultDestructable: true,
         jumpDelay: 75,
         size: { x: 16, y: 16 },
-        position: { x: 16 * Game.getRandom(2, 11), y: 16 * Game.getRandom(2, 11) },
+        position: {
+            x: 16 * Game.random(2, 9) + Game.ROOM_OFFSET.x * 16,
+            y: 16 * Game.random(2, 9) + Game.ROOM_OFFSET.y * 16,
+        },
         stats: {
             maxHp: 50,
             hp: 50,
@@ -738,7 +939,10 @@ new Chest({
         hasCollision: true,
         isDefaultDestructable: true,
         size: { x: 16, y: 16 },
-        position: { x: 16 * Game.getRandom(3, 10), y: 16 * Game.getRandom(3, 10) },
+        position: {
+            x: 16 * Game.random(2, 9) + Game.ROOM_OFFSET.x * 16,
+            y: 16 * Game.random(2, 9) + Game.ROOM_OFFSET.y * 16,
+        },
         stats: {
             maxHp: 100,
             hp: 100,
@@ -755,7 +959,10 @@ new Chest({
         hasCollision: true,
         isDefaultDestructable: true,
         size: { x: 16, y: 16 },
-        position: { x: 16 * Game.getRandom(3, 10), y: 16 * Game.getRandom(3, 10) },
+        position: {
+            x: 16 * Game.random(2, 9) + Game.ROOM_OFFSET.x * 16,
+            y: 16 * Game.random(2, 9) + Game.ROOM_OFFSET.y * 16,
+        },
         stats: {
             maxHp: 100,
             hp: 100,
